@@ -1,0 +1,16 @@
+
+TIMEOUT_REDIS_LOCK = 0.5
+
+LOGGING_LEVEL = 10 # DEBUG
+LOGGING_FORMAT = '[%(asctime)s] (%(levelname)s) %(name)s: %(message)s'
+
+'''
+CRITICAL = 50
+FATAL = CRITICAL
+ERROR = 40
+WARNING = 30
+WARN = WARNING
+INFO = 20
+DEBUG = 10
+NOTSET = 0
+'''
