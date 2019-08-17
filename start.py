@@ -31,7 +31,7 @@ def main():
 
 
     daemon = orderbook.OrderbookDaemon(market_base, markets)
-    daemon.run()
+    daemon.start()
 
 
 
