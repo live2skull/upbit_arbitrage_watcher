@@ -1,4 +1,5 @@
 from sys import argv, stdout
+import signal, os
 
 import logging
 from threading import Thread
@@ -141,8 +142,17 @@ class OrderbookDaemon(Thread):
     markets = None # type: dict
     markets_str = None # type: str
 
+    def signal_handler(self, sig, frame):
+        print("!!! ** warn shutdown. please wait... ")
+        self.join(timeout=10)
+        print("!!! now exit.")
+
     def __init__(self, market_base:str, markets: str):
         ## TODO: 데몬이 사전에 실행되고 있는가?
+
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        # signal.signal(signal.SIGKILL, self.signal_handler)
 
         Thread.__init__(self)
         self.is_running = False
@@ -160,6 +170,7 @@ class OrderbookDaemon(Thread):
             self.markets.setdefault(market, Orderbook(market, self.pool))
 
 
+        # 로깅 옵션을 설정합니다.
         self.logger = logging.getLogger("%s_orderbook_daemon" % self.market_base)
         self.logger.setLevel(LOGGING_LEVEL)
         self.logger.propagate = False  # root 핸들러에 전달하지 않음??

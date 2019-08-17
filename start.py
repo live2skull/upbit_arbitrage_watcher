@@ -14,10 +14,8 @@ def main():
     load_dotenv()
 
     market_base = argv[1]
-    markets = argv[2]
-
-    daemon = orderbook.OrderbookDaemon(market_base, markets)
-    daemon.run()
+    markets = argv[2] # TODO: replace markets arg -> markets file
+    # 옵션 파싱기를 사용하자.
 
     def signal_handler(sig, frame):
         print("!!! ** warn shutdown. please wait... ")
@@ -25,10 +23,17 @@ def main():
         print("!!! now exit.")
         exit(0)
 
+
     # 윈도우에서 제대로 동작하지 않는 것 같음.
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGKILL, signal_handler) # support windows pycharm environment
+    # signal.signal(signal.SIGKILL, signal_handler)  # support windows pycharm environment
+
+
+    daemon = orderbook.OrderbookDaemon(market_base, markets)
+    daemon.run()
+
+
 
     while True:
         input()

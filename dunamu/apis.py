@@ -10,6 +10,35 @@ URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
 
 
+
+class UpbitAPIClient(Session):
+
+    times = {}
+
+    def __init__(self):
+        Session.__init__(self)
+
+    def get(self, url, params=None, **kwargs):
+        self.check_and_wait()
+        resp = Session.get(url=url, params=params, **kwargs)
+        self.finalize(resp)
+
+    def post(self, url, params=None, data=None, **kwargs):
+        self.check_and_wait()
+        resp = Session.post(url=url, params=params, data=data, **kwargs)
+        self.finalize(resp)
+
+    def check_and_wait(self):
+        pass
+
+    def finalize(self, resp):
+        pass
+
+'''
+TODO:
+class 화 하여 작성 -> Remaning 에 대한 대처가 필요함.
+'''
+
 '''
 TODO
 
@@ -32,7 +61,7 @@ def _finalize(resp):
         message = resp_obj['error']['message']
 
         # stack info?
-        logging.critical('\nmessage: %s' % (
+        logging.critical('message: %s' % (
             message
         ))
         raise Exception(message)
@@ -46,6 +75,8 @@ def get_orderbook(markets, sess:Session=None):
     if type(markets) is list:
         markets = ",".join(markets)
     resp = _func(url=URL_ORDERBOOK, params={'markets': markets})
+
+    print(resp.headers)
 
     return _finalize(resp)
 
