@@ -18,8 +18,8 @@ def main():
     # 옵션 파싱기를 사용하자.
 
     def signal_handler(sig, frame):
-        print("!!! ** warn shutdown. please wait... ")
-        daemon.join(timeout=10)
+        print("!!! ** warm shutdown. please wait... ")
+        daemon.join(timeout=5)
         print("!!! now exit.")
         exit(0)
 

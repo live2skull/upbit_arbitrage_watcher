@@ -5,34 +5,83 @@
 
 import logging
 from requests import Session, get, post
+from time import sleep
+import parse
+
+from .misc import get_timestamp
 
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
 
 
-
 class UpbitAPIClient(Session):
 
-    times = {}
+    remainings = {}
 
     def __init__(self):
         Session.__init__(self)
 
-    def get(self, url, params=None, **kwargs):
-        self.check_and_wait()
+    def get(self, group, url, params=None, **kwargs):
+        self.check_and_wait(group)
         resp = Session.get(url=url, params=params, **kwargs)
         self.finalize(resp)
 
-    def post(self, url, params=None, data=None, **kwargs):
-        self.check_and_wait()
+    def post(self, group, url, params=None, data=None, **kwargs):
+        self.check_and_wait(group)
         resp = Session.post(url=url, params=params, data=data, **kwargs)
         self.finalize(resp)
 
-    def check_and_wait(self):
-        pass
+    def set_initial_remain(self, group):
+        self.remainings.setdefault(group, {'min': None, 'sec': None, 'timestamp': None})
+
+    def check_and_wait(self, group):
+        # 우선 초 단위의 remain만 핸들링
+        self.set_initial_remain(group)
+        remain = self.remainings[group]
+
+        # 처음 요청하는 경우 별도로 확인할 필요 없음.
+        if remain['timestamp'] is None:
+            remain['timestamp'] = get_timestamp()
+            return
+
+        elif remain['sec'] is 0:
+            # 남은 remaining 이 없는 경우 일정 시간 대기하면서 기다린다.
+            while get_timestamp() < remain['timestamp'] + 1000:
+                sleep(0.05)
 
     def finalize(self, resp):
-        pass
+        #1. check remaining info!
+        _remain_header = resp.headers['Remaining-Req']
+        group, min, sec = parse.parse(
+            'group={}; min={}; sec={}', _remain_header
+        )
+
+        self.set_initial_remain(_remain_header[group])
+        remain = self.remainings[group]
+        remain['timestamp'] = get_timestamp()
+        remain['min'] = int(min)
+        remain['sec'] = int(sec)
+
+
+        #2. check error info!
+        resp_obj = resp.json()
+        if type(resp_obj) is dict and 'error' in resp_obj.keys():
+            message = resp_obj['error']['message']
+
+            # stack info?
+            logging.critical('message: %s' % (
+                message
+            ))
+            raise Exception(message)
+        return resp_obj
+
+    #### --- api declaration
+
+    def get_orderbook(self, markets):
+        if type(markets) is list:
+            markets = ",".join(markets)
+        return self.get(group='market', url=URL_ORDERBOOK, params={'markets': markets})
+
 
 '''
 TODO:

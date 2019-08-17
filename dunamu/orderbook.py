@@ -142,17 +142,8 @@ class OrderbookDaemon(Thread):
     markets = None # type: dict
     markets_str = None # type: str
 
-    def signal_handler(self, sig, frame):
-        print("!!! ** warn shutdown. please wait... ")
-        self.join(timeout=10)
-        print("!!! now exit.")
-
     def __init__(self, market_base:str, markets: str):
         ## TODO: 데몬이 사전에 실행되고 있는가?
-
-        signal.signal(signal.SIGTERM, self.signal_handler)
-        signal.signal(signal.SIGINT, self.signal_handler)
-        # signal.signal(signal.SIGKILL, self.signal_handler)
 
         Thread.__init__(self)
         self.is_running = False
