@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from .config import TIMEOUT_REDIS_LOCK, LOGGING_LEVEL, LOGGING_FORMAT
 
-from .apis import get_orderbook
+from .apis import UpbitAPIClient
 from .misc import create_web_session, create_redis_pool, get_timestamp
 
 
@@ -135,7 +135,7 @@ class OrderbookDaemon(Thread):
     logger = None
 
     is_running = None  # type: bool
-    sess = None  # type: Session
+    client = None # type: UpbitAPIClient
     pool = None  # type: redis.ConnectionPool
 
     market_base = None # type: str
@@ -151,7 +151,7 @@ class OrderbookDaemon(Thread):
         self.market_base = market_base
         self.markets = dict()
 
-        self.sess = create_web_session() # use keep-alive connection
+        self.client = UpbitAPIClient()
         self.pool = create_redis_pool()
 
         # initializing orderbook
@@ -188,7 +188,7 @@ class OrderbookDaemon(Thread):
 
     def loop(self):
         while self.is_running:
-            resp = self.get_orderbook()
+            resp = self.client.get_orderbook(self.markets_str)
 
             for ifo in resp:
                 market = ifo['market']
@@ -202,8 +202,3 @@ class OrderbookDaemon(Thread):
     def send_update_event(self, market):
         # TODO: using rabbitmq messenger!
         pass
-
-    # 이미 구현된 cctx 라이브러리가 있으므로 테스트 필요
-    def get_orderbook(self):
-        return get_orderbook(markets=self.markets, sess=self.sess)
-

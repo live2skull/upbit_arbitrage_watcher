@@ -23,13 +23,13 @@ class UpbitAPIClient(Session):
 
     def get(self, group, url, params=None, **kwargs):
         self.check_and_wait(group)
-        resp = Session.get(url=url, params=params, **kwargs)
-        self.finalize(resp)
+        resp = Session.get(self, url=url, params=params, **kwargs)
+        return self.finalize(resp)
 
     def post(self, group, url, params=None, data=None, **kwargs):
         self.check_and_wait(group)
-        resp = Session.post(url=url, params=params, data=data, **kwargs)
-        self.finalize(resp)
+        resp = Session.post(self, url=url, params=params, data=data, **kwargs)
+        return self.finalize(resp)
 
     def set_initial_remain(self, group):
         self.remainings.setdefault(group, {'min': None, 'sec': None, 'timestamp': None})
@@ -55,8 +55,7 @@ class UpbitAPIClient(Session):
         group, min, sec = parse.parse(
             'group={}; min={}; sec={}', _remain_header
         )
-
-        self.set_initial_remain(_remain_header[group])
+        self.set_initial_remain(group)
         remain = self.remainings[group]
         remain['timestamp'] = get_timestamp()
         remain['min'] = int(min)
