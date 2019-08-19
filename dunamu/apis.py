@@ -47,10 +47,15 @@ class UpbitAPIClient(Session):
             remain['timestamp'] = get_timestamp()
             return
 
-        elif remain['sec'] is 0:
-            self.logger.warn('no remaining in sec! (%s) awaiting 1 sec' % group)
-            # 남은 remaining 이 없는 경우 일정 시간 대기하면서 기다린다.
+        ## TODO: 해당 대응법이 오류가 발생하지 않는지 추가 확인 바람.
+        elif remain['min'] is 0:
+            self.logger.warn('no remaining in sec! (%s) awaiting 1000ms!' % group)
             while get_timestamp() < remain['timestamp'] + 1000:
+                sleep(0.05)
+
+        elif remain['sec'] is 0:
+            self.logger.warn('no remaining in sec! (%s) awaiting 100ms!' % group)
+            while get_timestamp() < remain['timestamp'] + 100:
                 sleep(0.05)
 
     def finalize(self, resp):
