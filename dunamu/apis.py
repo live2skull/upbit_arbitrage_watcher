@@ -63,14 +63,14 @@ class UpbitAPIClient(Session):
         ## 50ms 정도 스토틀링을 추가하였음.
         ## orderobok데이터가 바뀌는 걸 보면 해당 이벤트 발생시마다 바로 반영되는 것이 아니라
         ## 대략 100~200ms 분기별로 데이텨 변경 건이 접수가 되고 있음!
-        elif remain['min'] is 0:
+        if remain['min'] is 0:
             self.logger.warn('no remaining in sec! (%s) awaiting %s ms!' % (
                 group, THROTTLE_REMAIN_MIN_TIME * 1000
             ))
             while get_timestamp() < remain['timestamp'] + THROTTLE_REMAIN_MIN_TIME:
                 sleep(0.05)
 
-        elif remain['sec'] is 0:
+        if remain['sec'] is 0:
             self.logger.warn('no remaining in sec! (%s) awaiting %s ms!' % (
                 group, THROTTLE_REMAIN_SEC_TIME * 1000
             ))
