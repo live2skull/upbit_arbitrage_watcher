@@ -9,6 +9,8 @@ def verify_orderbook():
     pool = misc.create_redis_pool()
     r = redis.StrictRedis(connection_pool=pool)
 
+    err = []
+
     keys = r.keys('*_last_*')
     for k in keys:
         k = k.decode()
@@ -16,7 +18,9 @@ def verify_orderbook():
         if val is not 0:
             print('%s is %s : OK!' % (k, val))
         else:
-            raise Exception('%s value is not set' % k)
+            err.append(k)
+
+    print(" ".join(err))
 
 def main():
     load_dotenv()

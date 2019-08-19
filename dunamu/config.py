@@ -6,7 +6,7 @@ THROTTLE_REMAIN_SEC_TIME = 200
 THROTTLE_REMAIN_MIN_TIME = 2000
 
 
-LOGGING_LEVEL = 10 # DEBUG
+LOGGING_LEVEL = 20 # DEBUG
 LOGGING_FORMAT = '[%(asctime)s] (%(levelname)s) %(name)s: %(message)s'
 
 '''

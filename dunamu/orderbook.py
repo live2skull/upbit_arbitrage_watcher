@@ -103,7 +103,7 @@ class Orderbook:
                 return False
             else:
                 self.last_update_time = timestamp
-                self.logger.debug('orderbook updated.')
+                self.logger.info('orderbook updated.')
                 return True
 
     ## support *redis* memory sharing!
@@ -153,7 +153,7 @@ class OrderbookDaemon(Thread):
 
 
         # 로깅 옵션을 설정합니다.
-        self.logger = create_logger("%s_orderbook_daemon" % self.market_base, LOGGING_LEVEL)
+        self.logger = create_logger("%s_orderbook_daemon" % self.market_base)
 
 
     # overwrite
