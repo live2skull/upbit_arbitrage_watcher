@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from .config import TIMEOUT_REDIS_LOCK, LOGGING_LEVEL, LOGGING_FORMAT
 
 from .apis import UpbitAPIClient
-from .misc import create_web_session, create_redis_pool, get_timestamp
+from .misc import create_logger, create_redis_pool, get_timestamp
 
 
 # KRW-BTC_orderbook__lock
@@ -162,14 +162,7 @@ class OrderbookDaemon(Thread):
 
 
         # 로깅 옵션을 설정합니다.
-        self.logger = logging.getLogger("%s_orderbook_daemon" % self.market_base)
-        self.logger.setLevel(LOGGING_LEVEL)
-        self.logger.propagate = False  # root 핸들러에 전달하지 않음??
-
-        formatter = logging.Formatter(LOGGING_FORMAT)
-        stream_hander = logging.StreamHandler(stdout)
-        stream_hander.setFormatter(formatter)
-        self.logger.addHandler(stream_hander)
+        self.logger = create_logger("%s_orderbook_daemon" % self.market_base, LOGGING_LEVEL)
 
 
     # overwrite

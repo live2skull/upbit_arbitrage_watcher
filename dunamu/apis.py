@@ -8,7 +8,8 @@ from requests import Session, get, post
 from time import sleep
 import parse
 
-from .misc import get_timestamp
+from .misc import get_timestamp, create_logger
+from .config import LOGGING_LEVEL
 
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
@@ -16,10 +17,12 @@ URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
 
 class UpbitAPIClient(Session):
 
+    logger = None
     remainings = {}
 
     def __init__(self):
         Session.__init__(self)
+        self.logger = create_logger('UpbitAPIClient')
 
     def get(self, group, url, params=None, **kwargs):
         self.check_and_wait(group)
@@ -45,6 +48,7 @@ class UpbitAPIClient(Session):
             return
 
         elif remain['sec'] is 0:
+            self.logger.warn('no remaining in sec! (%s) awaiting 1 sec' % group)
             # 남은 remaining 이 없는 경우 일정 시간 대기하면서 기다린다.
             while get_timestamp() < remain['timestamp'] + 1000:
                 sleep(0.05)
@@ -61,6 +65,9 @@ class UpbitAPIClient(Session):
         remain['min'] = int(min)
         remain['sec'] = int(sec)
 
+        self.logger.debug("remaining req: group=%s min=%s sec=%s" % (
+            group, min, sec
+        ))
 
         #2. check error info!
         resp_obj = resp.json()
@@ -79,7 +86,7 @@ class UpbitAPIClient(Session):
     def get_orderbook(self, markets):
         if type(markets) is list:
             markets = ",".join(markets)
-        return self.get(group='market', url=URL_ORDERBOOK, params={'markets': markets})
+        return self.get(group='orderbook', url=URL_ORDERBOOK, params={'markets': markets})
 
 
 '''
