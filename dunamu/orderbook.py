@@ -119,16 +119,7 @@ class Orderbook:
         self.r_lock_obj = self.r.lock(self.r_lock, blocking_timeout=TIMEOUT_REDIS_LOCK)
         self.r.delete(self.r_lock)
 
-        self.logger = logging.getLogger(self.r_name)
-        self.logger.setLevel(LOGGING_LEVEL)
-        self.logger.propagate = False # root 핸들러에 전달하지 않음??
-
-        formatter = logging.Formatter(LOGGING_FORMAT)
-        stream_hander = logging.StreamHandler(stdout)
-        stream_hander.setFormatter(formatter)
-        self.logger.addHandler(stream_hander)
-
-
+        self.logger = create_logger(self.r_name)
 
 
 class OrderbookDaemon(Thread):

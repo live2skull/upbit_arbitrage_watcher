@@ -1,5 +1,10 @@
 
 TIMEOUT_REDIS_LOCK = 0.5
+THROTTLE_API_DEFAULT_TIME = 50 # ms!
+
+THROTTLE_REMAIN_SEC_TIME = 0.2
+THROTTLE_REMAIN_MIN_TIME = 2
+
 
 LOGGING_LEVEL = 10 # DEBUG
 LOGGING_FORMAT = '[%(asctime)s] (%(levelname)s) %(name)s: %(message)s'

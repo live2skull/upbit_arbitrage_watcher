@@ -9,7 +9,8 @@ from time import sleep
 import parse
 
 from .misc import get_timestamp, create_logger
-from .config import LOGGING_LEVEL
+from .config import LOGGING_LEVEL, THROTTLE_API_DEFAULT_TIME, \
+    THROTTLE_REMAIN_MIN_TIME ,THROTTLE_REMAIN_SEC_TIME
 
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
@@ -37,7 +38,7 @@ class UpbitAPIClient(Session):
     def set_initial_remain(self, group):
         self.remainings.setdefault(group, {'min': None, 'sec': None, 'timestamp': None})
 
-    def check_and_wait(self, group):
+    def check_and_wait(self, group, throttle=True):
         # 우선 초 단위의 remain만 핸들링
         self.set_initial_remain(group)
         remain = self.remainings[group]
@@ -47,15 +48,33 @@ class UpbitAPIClient(Session):
             remain['timestamp'] = get_timestamp()
             return
 
-        ## TODO: 해당 대응법이 오류가 발생하지 않는지 추가 확인 바람.
+        # TODO: 스로들링 모듈로 별도 분리?
+        # 현재 이전 타임스탬프를 가지고 있음.
+        # 현재 타임스탬프와 이전 타임스탬프를 비교해서 계산.
+        if throttle:
+            tick = get_timestamp() - remain['timestamp'] # 마지막 요청 후 지난 시간
+            sl = THROTTLE_API_DEFAULT_TIME - tick
+
+            if sl > 0:
+                self.logger.debug("Throttling %s ms" % sl)
+                sleep(sl * 0.001) #  millisecond to second
+
+        ## 본 대응법이 오류가 발생하므로 가상 request가 많은 orderbook을 기준으로
+        ## 50ms 정도 스토틀링을 추가하였음.
+        ## orderobok데이터가 바뀌는 걸 보면 해당 이벤트 발생시마다 바로 반영되는 것이 아니라
+        ## 대략 100~200ms 분기별로 데이텨 변경 건이 접수가 되고 있음!
         elif remain['min'] is 0:
-            self.logger.warn('no remaining in sec! (%s) awaiting 1000ms!' % group)
-            while get_timestamp() < remain['timestamp'] + 1000:
+            self.logger.warn('no remaining in sec! (%s) awaiting %s ms!' % (
+                group, THROTTLE_REMAIN_MIN_TIME * 1000
+            ))
+            while get_timestamp() < remain['timestamp'] + THROTTLE_REMAIN_MIN_TIME:
                 sleep(0.05)
 
         elif remain['sec'] is 0:
-            self.logger.warn('no remaining in sec! (%s) awaiting 100ms!' % group)
-            while get_timestamp() < remain['timestamp'] + 100:
+            self.logger.warn('no remaining in sec! (%s) awaiting %s ms!' % (
+                group, THROTTLE_REMAIN_SEC_TIME * 1000
+            ))
+            while get_timestamp() < remain['timestamp'] + THROTTLE_REMAIN_SEC_TIME:
                 sleep(0.05)
 
     def finalize(self, resp):
