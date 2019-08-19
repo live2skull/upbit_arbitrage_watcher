@@ -2,6 +2,7 @@ import time
 import logging
 import os, sys
 
+import pika
 import redis
 from requests import Session
 
@@ -28,6 +29,23 @@ def create_logger(name: str, level:int = LOGGING_LEVEL, format:str = LOGGING_FOR
     logger.addHandler(stream_handler)
 
     return logger
+
+
+def create_pika_connection(host=None, port=None, user=None, password=None,
+                           virtual_host=None):
+    host = host if host else os.getenv('PIKA_HOST', None)
+    port = port if port else os.getenv('PIKA_PORT', None)
+    user = user if user else os.getenv('PIKA_USER', None)
+    password = password if password else os.getenv('PIKA_PASSWORD', None)
+    virtual_host = virtual_host if virtual_host else os.getenv('PIKA_VIRTUAL_HOST', None)
+
+    conn = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            host=host, port=port, virtual_host=virtual_host,
+            credentials=pika.PlainCredentials(user, password),
+        )
+    )
+    return conn
 
 
 def create_redis_pool(host=None, port=None, db=None):

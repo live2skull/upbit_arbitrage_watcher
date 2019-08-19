@@ -6,13 +6,15 @@ from threading import Thread
 
 from requests import Session
 import redis
+import pika
 
 from dotenv import load_dotenv
 
 from .config import TIMEOUT_REDIS_LOCK, LOGGING_LEVEL, LOGGING_FORMAT
 
 from .apis import UpbitAPIClient
-from .misc import create_logger, create_redis_pool, get_timestamp
+from .misc import create_logger, create_redis_pool\
+    , create_pika_connection,  get_timestamp
 
 
 # KRW-BTC_orderbook__lock
@@ -21,6 +23,10 @@ from .misc import create_logger, create_redis_pool, get_timestamp
 # https://www.joinc.co.kr/w/man/12/REDIS/IntroDataType
 # https://docs.python.org/2/library/timeit.html | performance checking
 
+PIKA_EXCHANGE = 'orderbook'
+PIKA_EXCHANGE_TYPE = 'topic'
+PIKA_BASIC_PROPERTY = pika.spec.BasicProperties(delivery_mode=1)
+
 ASK_PRICES = '_ask_prices'
 ASK_SIZES = '_ask_sizes'
 BID_PRICES = '_bid_prices'
@@ -28,6 +34,7 @@ BID_SIZES = '_bid_sizes'
 
 LAST_UPDATE_TIME = '_last_update_time'
 LAST_REQUEST_TIME = '_last_request_time'
+
 
 
 class Orderbook:
@@ -126,8 +133,10 @@ class OrderbookDaemon(Thread):
     logger = None
 
     is_running = None  # type: bool
-    client = None # type: UpbitAPIClient
-    pool = None  # type: redis.ConnectionPool
+    upbit_client = None # type: UpbitAPIClient
+    redis_pool = None  # type: redis.ConnectionPool
+    pika_conn = None
+    pika_channel = None  # type: BlockingChannel
 
     market_base = None # type: str
     markets = None # type: dict
@@ -142,15 +151,18 @@ class OrderbookDaemon(Thread):
         self.market_base = market_base
         self.markets = dict()
 
-        self.client = UpbitAPIClient()
-        self.pool = create_redis_pool()
+        self.upbit_client = UpbitAPIClient()
+        self.redis_pool = create_redis_pool()
+        self.pika_conn = create_pika_connection()
+        self.pika_channel = self.pika_conn.channel()
+
+        self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
 
         # initializing orderbook
         # def __init__(self, market: str, pool):
         # 이렇게 하면 각각의 orderbook 객체별로 하나의 커넥션을 이용해 redis를 이용할 수 있습니다.
         for market in markets.split(','):
-            self.markets.setdefault(market, Orderbook(market, self.pool))
-
+            self.markets.setdefault(market, Orderbook(market, self.redis_pool))
 
         # 로깅 옵션을 설정합니다.
         self.logger = create_logger("%s_orderbook_daemon" % self.market_base)
@@ -172,7 +184,7 @@ class OrderbookDaemon(Thread):
 
     def loop(self):
         while self.is_running:
-            resp = self.client.get_orderbook(self.markets_str)
+            resp = self.upbit_client.get_orderbook(self.markets_str)
 
             for ifo in resp:
                 market = ifo['market']
@@ -180,6 +192,12 @@ class OrderbookDaemon(Thread):
                 units = ifo['orderbook_units']
 
                 updated = self.markets[market].update(timestamp, units)
+                if updated:
+                    self.pika_channel.basic_publish(
+                        exchange=PIKA_EXCHANGE, routing_key=market,
+                        body=str(timestamp),
+                        properties=PIKA_BASIC_PROPERTY
+                    )
 
             # market 별로 데이터 추출해서 orderbook에 넣어줍니다.
 
