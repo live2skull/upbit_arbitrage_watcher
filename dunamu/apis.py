@@ -9,7 +9,7 @@ from time import sleep
 import parse
 
 from .misc import get_timestamp, create_logger
-from .config import LOGGING_LEVEL, THROTTLE_API_DEFAULT_TIME, \
+from .config import THROTTLE_API_DEFAULT_TIME, \
     THROTTLE_REMAIN_MIN_TIME ,THROTTLE_REMAIN_SEC_TIME
 
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'

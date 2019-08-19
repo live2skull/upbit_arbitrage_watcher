@@ -6,7 +6,9 @@ import pika
 import redis
 from requests import Session
 
-from .config import LOGGING_FORMAT, LOGGING_LEVEL
+
+def _get_default(os_env, recv):
+    return recv if recv else os.getenv(os_env, None)
 
 
 def get_timestamp():
@@ -17,8 +19,12 @@ def get_timestamp():
     return int(time.time() * 1000)
 
 
-def create_logger(name: str, level:int = LOGGING_LEVEL, format:str = LOGGING_FORMAT,
+def create_logger(name: str, level:int = None, format:str = None,
                   propagate=False):
+
+    level = int(_get_default('LOGGING_LEVEL', level))
+    format = _get_default('LOGGING_FORMAT', format)
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.propagate = propagate
@@ -33,11 +39,12 @@ def create_logger(name: str, level:int = LOGGING_LEVEL, format:str = LOGGING_FOR
 
 def create_pika_connection(host=None, port=None, user=None, password=None,
                            virtual_host=None):
-    host = host if host else os.getenv('PIKA_HOST', None)
-    port = port if port else os.getenv('PIKA_PORT', None)
-    user = user if user else os.getenv('PIKA_USER', None)
-    password = password if password else os.getenv('PIKA_PASSWORD', None)
-    virtual_host = virtual_host if virtual_host else os.getenv('PIKA_VIRTUAL_HOST', None)
+
+    host = _get_default('PIKA_HOST', host)
+    port = _get_default('PIKA_PORT', port)
+    user = _get_default('PIKA_USER', user)
+    password = _get_default('PIKA_PASSWORD', password)
+    virtual_host = _get_default('PIKA_VIRTUAL_HOST', virtual_host)
 
     conn = pika.BlockingConnection(
         pika.ConnectionParameters(
@@ -49,9 +56,9 @@ def create_pika_connection(host=None, port=None, user=None, password=None,
 
 
 def create_redis_pool(host=None, port=None, db=None):
-    host = host if host else os.getenv('REDIS_HOST', None)
-    port = port if port else os.getenv('REDIS_PORT', None)
-    db = db if db else os.getenv('REDIS_DB', db)
+    host = _get_default('REDIS_HOST', host)
+    port = _get_default('REDIS_PORT', port)
+    db = _get_default('REDIS_DB', db)
 
     return redis.ConnectionPool(host=host, port=port, db=db)
 

@@ -10,11 +10,11 @@ import pika
 
 from dotenv import load_dotenv
 
-from .config import TIMEOUT_REDIS_LOCK, LOGGING_LEVEL, LOGGING_FORMAT
 
 from .apis import UpbitAPIClient
 from .misc import create_logger, create_redis_pool\
     , create_pika_connection,  get_timestamp
+from .config import TIMEOUT_REDIS_LOCK
 
 
 # KRW-BTC_orderbook__lock
