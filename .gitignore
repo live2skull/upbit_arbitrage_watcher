@@ -4,6 +4,8 @@
 # my configuration file!
 .env
 
+*.sh
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
