@@ -36,8 +36,9 @@ LAST_UPDATE_TIME = '_last_update_time'
 LAST_REQUEST_TIME = '_last_request_time'
 
 
-def strs2floats(val: list):
-    pass
+def strs2floats(val: list, target: list):
+    target.clear()
+    for v in val: target.append(float(v))
 
 
 
@@ -53,27 +54,45 @@ class Orderbook:
     r_lock_obj = None
 
     market = None  # type: str
+    is_daemon = None # type: bool
 
     last_update_time = None  # type: long
     last_request_time = None  # type: long
 
     # for support caching
-    units = None # type: dict
+    _units = None # type: dict
 
 
     @property
     def units(self):
-        ## TODO: add caching support!
         # 데이터 입력시에는 str (byte) 형태로 저장되므로 반환시에는 float으로 변환 후 처리.
+
         with self.r_lock_obj:
-            ask_prices = strs2floats(self.r.lrange(self.r_name + ASK_PRICES, 0, -1))
-            ask_amounts = strs2floats(self.r.lrange(self.r_name + ASK_AMOUNTS, 0, -1))
-            bid_prices = strs2floats(self.r.lrange(self.r_name + BID_PRICES, 0, -1))
-            bid_amounts = strs2floats(self.r.lrange(self.r_name + BID_AMOUNTS, 0, -1))
+            last_updated = int(self.r.get(self.r_name + LAST_UPDATE_TIME))
+            if last_updated > self.last_update_time:
+                strs2floats(
+                    self.r.lrange(self.r_name + ASK_PRICES, 0, -1),
+                    self._units[ASK_PRICES]
+                )
+                strs2floats(
+                    self.r.lrange(self.r_name + ASK_AMOUNTS, 0, -1),
+                    self._units[ASK_AMOUNTS]
+                )
+                strs2floats(
+                    self.r.lrange(self.r_name + BID_PRICES, 0, -1),
+                    self._units[BID_PRICES]
+                )
+                strs2floats(
+                    self.r.lrange(self.r_name + BID_AMOUNTS, 0, -1),
+                    self._units[BID_AMOUNTS]
+                )
 
+                # 데이터가 변경되는 상황은 없으니, 별도의 copy를 하지 않아도 무방합니다.
+                return self._units
 
+            else:
+                return self._units
 
-            # return self.r.hgetall(self.r_name)
 
     def _update_timestamp(self):
         self.r.set(self.r_name + LAST_REQUEST_TIME, self.last_request_time)
@@ -125,7 +144,7 @@ class Orderbook:
                 return True
 
     ## support *redis* memory sharing!
-    def __init__(self, market: str, pool):
+    def __init__(self, market: str, pool=None):
         self.market = market
         self.last_request_time = 0
         self.last_update_time = 0
@@ -133,11 +152,24 @@ class Orderbook:
 
         self.r_name = "%s_orderbook" % self.market
         self.r_lock = "%s__lock" % self.r_name
-        self.r = redis.Redis(connection_pool=pool)
+
+        self.is_daemon = pool is not None
+
+        # 일반 테스트 모드에서 실행할 경우 자동으로 커넥션을 만듭니다.
+        self.r = redis.Redis(connection_pool=pool if pool else create_redis_pool())
         self.r_lock_obj = self.r.lock(self.r_lock, blocking_timeout=TIMEOUT_REDIS_LOCK)
-        self.r.delete(self.r_lock)
+        # self.r.delete(self.r_lock)
 
         self.logger = create_logger(self.r_name)
+        # 유닛 데이터를 초기화합니다.
+        self._units = {
+            BID_AMOUNTS: [], BID_PRICES: [], ASK_AMOUNTS: [], ASK_PRICES: []
+        }
+
+    def __del__(self):
+        if self.is_daemon:
+            try: self.r.delete(self.r_lock)
+            except: pass
 
 
 class OrderbookDaemon(Thread):

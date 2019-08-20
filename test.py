@@ -4,19 +4,23 @@ load_dotenv()
 import os, sys
 import redis
 
-from dunamu import apis, misc, calculator
+from dunamu import apis, misc, calculator, orderbook
 
 
 def calc():
-    pool = misc.create_redis_pool()
-    r = redis.StrictRedis(connection_pool=pool)
 
-    ask_prices = r.lrange('KRW-BTC_orderbook_ask_prices', 0, -1)
-    ask_amounts = r.lrange('KRW-BTC_orderbook_ask_amounts', 0, -1)
-    bid_prices = r.lrange('KRW-BTC_orderbook_bid_prices', 0, -1)
-    bid_amounts = r.lrange('KRW-BTC_orderbook_bid_amounts', 0, -1)
+    order = orderbook.Orderbook('KRW-BTC')
+    print(order.units)
 
-    print(ask_prices, ask_amounts, bid_prices, bid_amounts)
+    # pool = misc.create_redis_pool()
+    # r = redis.StrictRedis(connection_pool=pool)
+    #
+    # ask_prices = r.lrange('KRW-BTC_orderbook_ask_prices', 0, -1)
+    # ask_amounts = r.lrange('KRW-BTC_orderbook_ask_amounts', 0, -1)
+    # bid_prices = r.lrange('KRW-BTC_orderbook_bid_prices', 0, -1)
+    # bid_amounts = r.lrange('KRW-BTC_orderbook_bid_amounts', 0, -1)
+    #
+    # print(ask_prices, ask_amounts, bid_prices, bid_amounts)
 
 
 

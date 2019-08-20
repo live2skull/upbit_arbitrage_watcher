@@ -3,6 +3,7 @@
 
 # my configuration file!
 .env
+__pycache__
 
 *.sh
 
