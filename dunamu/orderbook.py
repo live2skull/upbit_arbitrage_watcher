@@ -69,21 +69,24 @@ class Orderbook:
 
         with self.r_lock_obj:
             last_updated = int(self.r.get("%s_%s" % (self.r_name, LAST_UPDATE_TIME)))
+            if last_updated is None:
+                self.logger.critical("orderbook 데이터가 존재하지 않음.")
+                return None
             if last_updated > self.last_update_time:
                 strs2floats(
-                    self.r.lrange(self.r_name + ASK_PRICES, 0, -1),
+                    self.r.lrange("%s_%s" % (self.r_name, ASK_PRICES), 0, -1),
                     self._units[ASK_PRICES]
                 )
                 strs2floats(
-                    self.r.lrange(self.r_name + ASK_AMOUNTS, 0, -1),
+                    self.r.lrange("%s_%s" % (self.r_name , ASK_AMOUNTS), 0, -1),
                     self._units[ASK_AMOUNTS]
                 )
                 strs2floats(
-                    self.r.lrange(self.r_name + BID_PRICES, 0, -1),
+                    self.r.lrange("%s_%s" % (self.r_name , BID_PRICES), 0, -1),
                     self._units[BID_PRICES]
                 )
                 strs2floats(
-                    self.r.lrange(self.r_name + BID_AMOUNTS, 0, -1),
+                    self.r.lrange("%s_%s" % (self.r_name , BID_AMOUNTS), 0, -1),
                     self._units[BID_AMOUNTS]
                 )
 
@@ -102,7 +105,7 @@ class Orderbook:
         self.r.delete("%s_%s" % (self.r_name , ASK_PRICES))
         self.r.delete("%s_%s" % (self.r_name , ASK_AMOUNTS))
         self.r.delete("%s_%s" % (self.r_name , BID_PRICES))
-        self.r.delete("%s_%s" % (self.r_name , BID_PRICES))
+        self.r.delete("%s_%s" % (self.r_name , BID_AMOUNTS))
 
         bid_prices = []; bid_sizes = []
         ask_prices = []; ask_sizes = []

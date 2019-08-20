@@ -9,26 +9,20 @@ from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
     BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
 
+# https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
+
 def calc():
 
     order = orderbook.Orderbook('KRW-BTC')
     units = order.units
 
-    print(units.keys())
-
-    balance, amount = calculator.vt_buy_all(350000, 0.05, units[ASK_PRICES], units[ASK_AMOUNTS])
+    # 잘 돌아가는것 같기도....
+    balance, amount = calculator.vt_buy_all(13500000, 0.05, units[ASK_PRICES], units[ASK_AMOUNTS])
     print(balance, amount)
 
-    # pool = misc.create_redis_pool()
-    # r = redis.StrictRedis(connection_pool=pool)
-    #
-    # ask_prices = r.lrange('KRW-BTC_orderbook_ask_prices', 0, -1)
-    # ask_amounts = r.lrange('KRW-BTC_orderbook_ask_amounts', 0, -1)
-    # bid_prices = r.lrange('KRW-BTC_orderbook_bid_prices', 0, -1)
-    # bid_amounts = r.lrange('KRW-BTC_orderbook_bid_amounts', 0, -1)
-    #
-    # print(ask_prices, ask_amounts, bid_prices, bid_amounts)
 
+    balance, amount = calculator.vt_sell_all(0.23510001, 0.05, units[BID_PRICES], units[BID_AMOUNTS])
+    print(balance, amount)
 
 
 def verify_orderbook():

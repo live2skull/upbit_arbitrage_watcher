@@ -9,38 +9,17 @@ logger = create_logger("calculator")
 
 getcontext().prec = CALC_DECIMAL_PRECISION
 
+CONVERT_FORMAT = "%." + str(UPBIT_DECIMAL_PRECISION) + 'f'
+
+# https://src-bin.com/ko/q/6f3bc
+# 정확한 이유는 모르지만 이렇게 했을 때 필요한 precision까지 끊어낼 수 있다.
+# %.nf 형식으로 작성할 경우 원하는 precision까지만 정확하게 부동 소수점을 제외하고
+# 출력할 수 있다.
 def dec2float(value: Decimal):
-    # 계산된 decimal 값을 float으로 변경합니다.
-    precision = 0
-
-    def _chk_dp():
-        cnt = 0
-        for s in str_value:
-            if s == "0": cnt += 1
-            else: return cnt
-
-    int_value = int(value)
-
-    if int_value == 0: # 0.000xxx 값인 경우 정수값을 유지할 필요가 없습니다.
-        str_value = str(value)[2:]
-        precision += (UPBIT_DECIMAL_PRECISION - _chk_dp())
-    else:
-        precision += (len(str(int_value)) + UPBIT_DECIMAL_PRECISION)
-
-    getcontext().prec = precision
-    value_float = float(value + Decimal(0)) # type: float
-    getcontext().prec = CALC_DECIMAL_PRECISION
-    return value_float
-
-
-
-# for support KRW trading
-# https://docs.upbit.com/docs/market-info-trade-price-detail
-# KRW마켓에서 매도 시에도 반영됩니다. (거래 테스트함)
-# def get_transactionable_balance(balance: Decimal):
-#     return 0
+    return float(CONVERT_FORMAT % value)
 
 ## -> 호가에 반영된다는 의미임. : 테스트 완료. balance에는 정수 단위부터(1원) 사용 가능하다.
+## -> 계산할때는 신경쓸 필요 없다.
 
 def conv2dec(value):
     return value if isinstance(value, Decimal) else Decimal(value)
@@ -55,32 +34,44 @@ def truncate(value: Decimal):
 
 ## ask_prices, ask_amounts 데이터들도 전부 dec으로 가정..??
 ## -> set 함수에 진입하기 전 decimal 타입으로 변경하여 줍니다.
-## fee is percentage!
+## fee = percentage!
+
+
+## https://eev.ee/blog/2011/04/24/gotcha-python-scoping-closures/
+# mutable 한 데이터를 scoping 할 수 있다?
+class CalcSession:
+    balance = None # type: Decimal
+    amount = None # type: Decimal
+    fee = None # type: Decimal
+    is_finished = None # type: int
+
+    def __init__(self, balance, amount, fee):
+        self.balance = conv2dec(balance)
+        self.amount = conv2dec(amount)
+        self.fee = Decimal(fee * 0.01 + 1)
+
 
 def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
-
-    balance = conv2dec(balance) # type: Decimal
-    fee = Decimal(fee * 0.01) # type: Decimal
-    amount = Decimal(0)
+    sess = CalcSession(balance, 0, fee)
     is_finished = 0
 
     def set_buy_amount(ask_price: Decimal, ask_amount: Decimal):
-        global balance, amount
 
         sym_amount = Symbol('sym_amount')
-        equation = (sym_amount * ask_price) * fee - balance
+        equation = (sym_amount * ask_price) * sess.fee - sess.balance
         _amount = solve_equation(equation)
 
         if _amount > ask_amount: # 현재의 거래가 완벽히 끝나지 않고 부분채결이 됨.
-            tbanalce = Decimal((ask_amount * ask_price) * fee) # 현재 호가에서 드는 가격 (최대)
-            balance -= truncate(tbanalce) if isKRW else tbanalce
-            amount += ask_amount # 현재 호가에서 구매 가능한 갯수 - 현재 호가 전체!
+            tbalance = Decimal((ask_amount * ask_price) * sess.fee) # 현재 호가에서 드는 가격 (최대)
+            sess.balance -= truncate(tbalance) if isKRW else tbalance
+            sess.amount += ask_amount # 현재 호가에서 구매 가능한 갯수 - 현재 호가 전체!
             return False
 
         else:
-            balance -= truncate(balance) if isKRW else balance
-            amount += _amount
+            sess.balance -= truncate(sess.balance) if isKRW else sess.balance
+            sess.amount += _amount
             return True
+
 
     for i in range(0, len(ask_prices)):
         _ask_price = Decimal(ask_prices[i])
@@ -94,35 +85,32 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
         logger.critical("vt_buy_all: 최대 호가로 거래를 종결할 수 없음.")
         raise Exception("최대 호가로 거래를 종결할 수 없음.")
 
-    balance = truncate(balance)
-    return dec2float(balance), dec2float(amount)
+    if isKRW: sess.balance = truncate(sess.balance)
+    return dec2float(sess.balance), dec2float(sess.amount)
 
 
 
 def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
 
-    amount = conv2dec(amount) # type: Decimal
-    fee = Decimal(fee * 0.01) # type: Decimal
-    balance = Decimal(0)
+    sess = CalcSession(0, amount, fee)
     is_finished = 0
 
     def set_sell_balance(bid_price: Decimal, bid_amount: Decimal):
-        global balance, amount
 
         is_continue = 0
         _amount = Decimal(0)
-        if amount > bid_amount:
+        if sess.amount > bid_amount:
             is_continue += 1
             _amount += bid_amount
         else:
-            _amount += amount
+            _amount += sess.amount
 
         contract_balance = _amount * bid_price
-        fee_balance = contract_balance * fee
+        fee_balance = contract_balance * (sess.fee - 1)
         _balance = contract_balance - fee_balance # 실제 입금되는 금액은 다음과 같다.
 
-        balance += truncate(_balance) if isKRW else _balance
-        amount -= _amount
+        sess.balance += truncate(_balance) if isKRW else _balance
+        sess.amount -= _amount
         return not bool(is_continue)
 
     for i in range(0, len(bid_prices)):
@@ -137,8 +125,8 @@ def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
         logger.critical("vt_sell_all: 최대 호가로 거래를 종결할 수 없음.")
         raise Exception("Error - 최대 호가로 거래를 종결할 수 없습니다.")
 
-    balance = math.trunc(balance) if isKRW else balance
-    return dec2float(balance), dec2float(amount)
+    balance = math.trunc(sess.balance) if isKRW else sess.balance
+    return dec2float(sess.balance), dec2float(sess.amount)
 
 
 
