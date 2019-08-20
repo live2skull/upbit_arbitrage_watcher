@@ -5,12 +5,19 @@ import os, sys
 import redis
 
 from dunamu import apis, misc, calculator, orderbook
+from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
+    BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
 
 def calc():
 
     order = orderbook.Orderbook('KRW-BTC')
-    print(order.units)
+    units = order.units
+
+    print(units.keys())
+
+    balance, amount = calculator.vt_buy_all(350000, 0.05, units[ASK_PRICES], units[ASK_AMOUNTS])
+    print(balance, amount)
 
     # pool = misc.create_redis_pool()
     # r = redis.StrictRedis(connection_pool=pool)

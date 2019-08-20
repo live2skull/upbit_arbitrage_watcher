@@ -27,13 +27,13 @@ PIKA_EXCHANGE = 'orderbook'
 PIKA_EXCHANGE_TYPE = 'topic'
 PIKA_BASIC_PROPERTY = pika.spec.BasicProperties(delivery_mode=1)
 
-ASK_PRICES = '_ask_prices'
-ASK_AMOUNTS = '_ask_amounts'
-BID_PRICES = '_bid_prices'
-BID_AMOUNTS = '_bid_amounts'
+ASK_PRICES = 'ask_prices'
+ASK_AMOUNTS = 'ask_amounts'
+BID_PRICES = 'bid_prices'
+BID_AMOUNTS = 'bid_amounts'
 
-LAST_UPDATE_TIME = '_last_update_time'
-LAST_REQUEST_TIME = '_last_request_time'
+LAST_UPDATE_TIME = 'last_update_time'
+LAST_REQUEST_TIME = 'last_request_time'
 
 
 def strs2floats(val: list, target: list):
@@ -68,7 +68,7 @@ class Orderbook:
         # 데이터 입력시에는 str (byte) 형태로 저장되므로 반환시에는 float으로 변환 후 처리.
 
         with self.r_lock_obj:
-            last_updated = int(self.r.get(self.r_name + LAST_UPDATE_TIME))
+            last_updated = int(self.r.get("%s_%s" % (self.r_name, LAST_UPDATE_TIME)))
             if last_updated > self.last_update_time:
                 strs2floats(
                     self.r.lrange(self.r_name + ASK_PRICES, 0, -1),
@@ -95,14 +95,14 @@ class Orderbook:
 
 
     def _update_timestamp(self):
-        self.r.set(self.r_name + LAST_REQUEST_TIME, self.last_request_time)
-        self.r.set(self.r_name + LAST_UPDATE_TIME, self.last_update_time)
+        self.r.set("%s_%s" % (self.r_name, LAST_REQUEST_TIME), self.last_request_time)
+        self.r.set("%s_%s" % (self.r_name, LAST_UPDATE_TIME), self.last_update_time)
 
     def _update_orderbook(self, units):
-        self.r.delete(self.r_name + ASK_PRICES)
-        self.r.delete(self.r_name + ASK_AMOUNTS)
-        self.r.delete(self.r_name + BID_PRICES)
-        self.r.delete(self.r_name + BID_AMOUNTS)
+        self.r.delete("%s_%s" % (self.r_name , ASK_PRICES))
+        self.r.delete("%s_%s" % (self.r_name , ASK_AMOUNTS))
+        self.r.delete("%s_%s" % (self.r_name , BID_PRICES))
+        self.r.delete("%s_%s" % (self.r_name , BID_PRICES))
 
         bid_prices = []; bid_sizes = []
         ask_prices = []; ask_sizes = []
@@ -113,10 +113,10 @@ class Orderbook:
             ask_prices.append(u['ask_price'])
             ask_sizes.append(u['ask_size'])
 
-        self.r.rpush(self.r_name + ASK_PRICES, *ask_prices)
-        self.r.rpush(self.r_name + ASK_AMOUNTS, *ask_sizes)
-        self.r.rpush(self.r_name + BID_PRICES, *bid_prices)
-        self.r.rpush(self.r_name + BID_AMOUNTS, *bid_sizes)
+        self.r.rpush("%s_%s" % (self.r_name , ASK_PRICES), *ask_prices)
+        self.r.rpush("%s_%s" % (self.r_name , ASK_AMOUNTS), *ask_sizes)
+        self.r.rpush("%s_%s" % (self.r_name , BID_PRICES), *bid_prices)
+        self.r.rpush("%s_%s" % (self.r_name , BID_AMOUNTS), *bid_sizes)
 
     def update(self, timestamp, units):
         self.last_request_time = get_timestamp()

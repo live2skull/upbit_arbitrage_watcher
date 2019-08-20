@@ -42,6 +42,9 @@ def dec2float(value: Decimal):
 
 ## -> 호가에 반영된다는 의미임. : 테스트 완료. balance에는 정수 단위부터(1원) 사용 가능하다.
 
+def conv2dec(value):
+    return value if isinstance(value, Decimal) else Decimal(value)
+
 
 def solve_equation(equation):
     return Decimal(str(solve(equation)[0]))
@@ -50,9 +53,14 @@ def solve_equation(equation):
 def truncate(value: Decimal):
     return math.trunc(value)
 
+## ask_prices, ask_amounts 데이터들도 전부 dec으로 가정..??
+## -> set 함수에 진입하기 전 decimal 타입으로 변경하여 줍니다.
+## fee is percentage!
 
 def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
 
+    balance = conv2dec(balance) # type: Decimal
+    fee = Decimal(fee * 0.01) # type: Decimal
     amount = Decimal(0)
     is_finished = 0
 
@@ -75,8 +83,8 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
             return True
 
     for i in range(0, len(ask_prices)):
-        _ask_price = ask_prices[i]
-        _ask_amount = ask_amounts[i]
+        _ask_price = Decimal(ask_prices[i])
+        _ask_amount = Decimal(ask_amounts[i])
 
         if set_buy_amount(ask_price=_ask_price, ask_amount=_ask_amount):
             is_finished += 1
@@ -87,12 +95,14 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
         raise Exception("최대 호가로 거래를 종결할 수 없음.")
 
     balance = truncate(balance)
-    return balance, amount
+    return dec2float(balance), dec2float(amount)
 
 
 
-def vt_sell_all(amount, fee, bid_prices, bid_amounts, isKRW=True):
+def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
 
+    amount = conv2dec(amount) # type: Decimal
+    fee = Decimal(fee * 0.01) # type: Decimal
     balance = Decimal(0)
     is_finished = 0
 
@@ -116,8 +126,8 @@ def vt_sell_all(amount, fee, bid_prices, bid_amounts, isKRW=True):
         return not bool(is_continue)
 
     for i in range(0, len(bid_prices)):
-        _bid_price = bid_prices[i]
-        _bid_amount = bid_amounts[i]
+        _bid_price = Decimal(bid_prices[i])
+        _bid_amount = Decimal(bid_amounts[i])
 
         if set_sell_balance(bid_price=_bid_price, bid_amount=_bid_amount):
             is_finished += 1
@@ -128,7 +138,7 @@ def vt_sell_all(amount, fee, bid_prices, bid_amounts, isKRW=True):
         raise Exception("Error - 최대 호가로 거래를 종결할 수 없습니다.")
 
     balance = math.trunc(balance) if isKRW else balance
-    return balance, amount # 거래화폐가 KRW 단위등으로 남는 경우가 있으므로 거래후 amount까지 남겨놓아야 한다.
+    return dec2float(balance), dec2float(amount)
 
 
 
