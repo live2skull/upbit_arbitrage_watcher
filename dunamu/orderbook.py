@@ -28,12 +28,16 @@ PIKA_EXCHANGE_TYPE = 'topic'
 PIKA_BASIC_PROPERTY = pika.spec.BasicProperties(delivery_mode=1)
 
 ASK_PRICES = '_ask_prices'
-ASK_SIZES = '_ask_sizes'
+ASK_AMOUNTS = '_ask_amounts'
 BID_PRICES = '_bid_prices'
-BID_SIZES = '_bid_sizes'
+BID_AMOUNTS = '_bid_amounts'
 
 LAST_UPDATE_TIME = '_last_update_time'
 LAST_REQUEST_TIME = '_last_request_time'
+
+
+def strs2floats(val: list):
+    pass
 
 
 
@@ -53,14 +57,21 @@ class Orderbook:
     last_update_time = None  # type: long
     last_request_time = None  # type: long
 
+    # for support caching
+    units = None # type: dict
+
+
     @property
     def units(self):
+        ## TODO: add caching support!
+        # 데이터 입력시에는 str (byte) 형태로 저장되므로 반환시에는 float으로 변환 후 처리.
         with self.r_lock_obj:
-            pass
-            # 데이터 4개를 가져와서 반환한다.
-            # 이렇게 작성해 놓으면 orderbook 객체는 orderbook 데몬에서 동작
-            # -> 실시간으로 업데이트된 값을 저장한다.
-            # 추가로 calculator 에서 필요할 때마다 데이터를 불러와서 사용.
+            ask_prices = strs2floats(self.r.lrange(self.r_name + ASK_PRICES, 0, -1))
+            ask_amounts = strs2floats(self.r.lrange(self.r_name + ASK_AMOUNTS, 0, -1))
+            bid_prices = strs2floats(self.r.lrange(self.r_name + BID_PRICES, 0, -1))
+            bid_amounts = strs2floats(self.r.lrange(self.r_name + BID_AMOUNTS, 0, -1))
+
+
 
             # return self.r.hgetall(self.r_name)
 
@@ -70,9 +81,9 @@ class Orderbook:
 
     def _update_orderbook(self, units):
         self.r.delete(self.r_name + ASK_PRICES)
-        self.r.delete(self.r_name + ASK_SIZES)
+        self.r.delete(self.r_name + ASK_AMOUNTS)
         self.r.delete(self.r_name + BID_PRICES)
-        self.r.delete(self.r_name + BID_SIZES)
+        self.r.delete(self.r_name + BID_AMOUNTS)
 
         bid_prices = []; bid_sizes = []
         ask_prices = []; ask_sizes = []
@@ -84,9 +95,9 @@ class Orderbook:
             ask_sizes.append(u['ask_size'])
 
         self.r.rpush(self.r_name + ASK_PRICES, *ask_prices)
-        self.r.rpush(self.r_name + ASK_SIZES, *ask_sizes)
+        self.r.rpush(self.r_name + ASK_AMOUNTS, *ask_sizes)
         self.r.rpush(self.r_name + BID_PRICES, *bid_prices)
-        self.r.rpush(self.r_name + BID_SIZES, *bid_sizes)
+        self.r.rpush(self.r_name + BID_AMOUNTS, *bid_sizes)
 
     def update(self, timestamp, units):
         self.last_request_time = get_timestamp()

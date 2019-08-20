@@ -1,9 +1,23 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os, sys
 import redis
 
+from dunamu import apis, misc, calculator
 
-from dotenv import load_dotenv
-from dunamu import apis, misc
+
+def calc():
+    pool = misc.create_redis_pool()
+    r = redis.StrictRedis(connection_pool=pool)
+
+    ask_prices = r.lrange('KRW-BTC_orderbook_ask_prices', 0, -1)
+    ask_amounts = r.lrange('KRW-BTC_orderbook_ask_amounts', 0, -1)
+    bid_prices = r.lrange('KRW-BTC_orderbook_bid_prices', 0, -1)
+    bid_amounts = r.lrange('KRW-BTC_orderbook_bid_amounts', 0, -1)
+
+    print(ask_prices, ask_amounts, bid_prices, bid_amounts)
+
 
 
 def verify_orderbook():
@@ -41,7 +55,6 @@ def pika_recv():
 
 
 def main():
-    load_dotenv()
     func = sys.argv[1]
 
     if func == 'verify_orderbook':
@@ -50,6 +63,8 @@ def main():
         pika_recv()
     elif func == 'pika_send':
         pika_send()
+    elif func == 'calc':
+        calc()
 
 if __name__ == '__main__':
     main()

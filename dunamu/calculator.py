@@ -3,13 +3,44 @@ from decimal import Decimal, getcontext, ROUND_DOWN, ROUND_UP
 from sympy import Symbol, solve
 
 from .misc import create_logger
+from .config import UPBIT_DECIMAL_PRECISION, CALC_DECIMAL_PRECISION
 
 logger = create_logger("calculator")
 
+getcontext().prec = CALC_DECIMAL_PRECISION
+
+def dec2float(value: Decimal):
+    # 계산된 decimal 값을 float으로 변경합니다.
+    precision = 0
+
+    def _chk_dp():
+        cnt = 0
+        for s in str_value:
+            if s == "0": cnt += 1
+            else: return cnt
+
+    int_value = int(value)
+
+    if int_value == 0: # 0.000xxx 값인 경우 정수값을 유지할 필요가 없습니다.
+        str_value = str(value)[2:]
+        precision += (UPBIT_DECIMAL_PRECISION - _chk_dp())
+    else:
+        precision += (len(str(int_value)) + UPBIT_DECIMAL_PRECISION)
+
+    getcontext().prec = precision
+    value_float = float(value + Decimal(0)) # type: float
+    getcontext().prec = CALC_DECIMAL_PRECISION
+    return value_float
+
+
 
 # for support KRW trading
-def get_transactionable_balance(balance: Decimal):
-    return 0
+# https://docs.upbit.com/docs/market-info-trade-price-detail
+# KRW마켓에서 매도 시에도 반영됩니다. (거래 테스트함)
+# def get_transactionable_balance(balance: Decimal):
+#     return 0
+
+## -> 호가에 반영된다는 의미임. : 테스트 완료. balance에는 정수 단위부터(1원) 사용 가능하다.
 
 
 def solve_equation(equation):
@@ -28,31 +59,18 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
     def set_buy_amount(ask_price: Decimal, ask_amount: Decimal):
         global balance, amount
 
-        _balance = get_transactionable_balance(balance) if balance else balance
         sym_amount = Symbol('sym_amount')
-        equation = (sym_amount * ask_price) * fee - _balance
+        equation = (sym_amount * ask_price) * fee - balance
         _amount = solve_equation(equation)
 
         if _amount > ask_amount: # 현재의 거래가 완벽히 끝나지 않고 부분채결이 됨.
-            if isKRW:
-                # 최소 거래 호가를 맞추기 위해 해당하는 balance 금액만큼의 amount를 재 산출합니다.
-                tbalance = get_transactionable_balance(
-                    (ask_price * ask_amount) * fee
-                )
-                equation = (sym_amount * ask_price) * fee - tbalance
-                _amount = solve_equation(equation)
-
-                balance -= truncate(_balance)
-                amount += _amount # 가능 호가로 재 산출한 값을 적용합니다.
-
-            else:
-                balance -= (ask_amount * ask_price) * fee # 혀재 호가에서 드는 가격
-                amount += ask_amount # 현재 호가에서 구매 가능한 갯수 - 현재 호가 전체!
-
+            tbanalce = Decimal((ask_amount * ask_price) * fee) # 현재 호가에서 드는 가격 (최대)
+            balance -= truncate(tbanalce) if isKRW else tbanalce
+            amount += ask_amount # 현재 호가에서 구매 가능한 갯수 - 현재 호가 전체!
             return False
 
         else:
-            balance -= truncate(_balance) if isKRW else _balance
+            balance -= truncate(balance) if isKRW else balance
             amount += _amount
             return True
 
