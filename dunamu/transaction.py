@@ -3,4 +3,8 @@
 
 # virtual transaction implementation!
 class Transaction:
-    pass
+
+    nexts = None # type: list
+
+    def __int__(self):
+        pass
