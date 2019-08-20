@@ -75,7 +75,7 @@ def main():
 
 
     channel.basic_consume(
-        queue=queue_name, on_message_callback=callback
+        queue=queue_name, on_message_callback=callback, auto_ack=True
     )
 
     thread = Thread(target=monitor)
