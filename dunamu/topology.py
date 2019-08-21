@@ -1,14 +1,15 @@
 from .transaction import Transaction
 from .misc import create_logger, create_redis_pool
 
+from .apis import UpbitLocalClient
+
 
 TERMS = {
     1 : 3, 2 : 4
 }
 
 
-def _get_markets(pool=None):
-    pass
+upbitLocalClient = UpbitLocalClient()
 
 
 #TODO: applying coroutine / lambda fast filtering

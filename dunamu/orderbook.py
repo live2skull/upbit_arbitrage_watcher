@@ -42,6 +42,9 @@ def strs2floats(val: list, target: list):
 
 
 
+## ex) KRW-BTC_orderbook_... 형태임
+## 이를 orderbook_KRW-BTC_bid_prices 와 같은 형태로 작성.
+
 class Orderbook:
 
     logger = None
@@ -153,7 +156,7 @@ class Orderbook:
         self.last_update_time = 0
 
 
-        self.r_name = "%s_orderbook" % self.market
+        self.r_name = "orderbook_%s" % self.market
         self.r_lock = "%s__lock" % self.r_name
 
         self.is_daemon = pool is not None

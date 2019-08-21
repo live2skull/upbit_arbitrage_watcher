@@ -7,8 +7,9 @@ import logging
 from requests import Session, get, post
 from time import sleep
 import parse
+import redis
 
-from .misc import get_timestamp, create_logger
+from .misc import get_timestamp, create_logger, create_redis_pool, create_pika_connection
 from .config import THROTTLE_API_DEFAULT_TIME, \
     THROTTLE_REMAIN_MIN_TIME ,THROTTLE_REMAIN_SEC_TIME
 
@@ -111,6 +112,27 @@ class UpbitAPIClient(Session):
         if type(markets) is list:
             markets = ",".join(markets)
         return self.get(group='orderbook', url=URL_ORDERBOOK, params={'markets': markets})
+
+
+    def get_all_markets(self):
+        return self.get(group="market", url=URL_ALL_MARKET)
+
+## TODO: 각 object에 대해 독립적으로 업데이트 등을 작성하여야 함.
+
+REDIS_ALL_MARKETS = ''
+
+class UpbitLocalClient(UpbitAPIClient):
+    r = None # type: Redis
+
+    def __init__(self):
+        UpbitAPIClient.__init__(self)
+        pool = create_redis_pool()
+        self.r = redis.StrictRedis(connection_pool=pool)
+
+
+    def get_all_markets(self, save=True):
+        pass
+
 
 
 '''
