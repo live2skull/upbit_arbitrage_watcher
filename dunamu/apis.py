@@ -113,25 +113,42 @@ class UpbitAPIClient(Session):
             markets = ",".join(markets)
         return self.get(group='orderbook', url=URL_ORDERBOOK, params={'markets': markets})
 
-
+    # https://wikidocs.net/64
     def get_all_markets(self):
-        return self.get(group="market", url=URL_ALL_MARKET)
+        return list(map(
+            lambda x: x['market'],
+            self.get(group="market", url=URL_ALL_MARKET)))
 
 ## TODO: 각 object에 대해 독립적으로 업데이트 등을 작성하여야 함.
 
-REDIS_ALL_MARKETS = ''
+ALL_MARKETS = 'markets'
 
 class UpbitLocalClient(UpbitAPIClient):
     r = None # type: Redis
+    force_update = None # type: bool
 
     def __init__(self):
-        UpbitAPIClient.__init__(self)
+        super(UpbitLocalClient, self).__init__()
         pool = create_redis_pool()
         self.r = redis.StrictRedis(connection_pool=pool)
+        self.update = False
 
+    @staticmethod
+    @property
+    def all_markets(self):
+        # 먼저 redis에서 데이터 가져오기
+        # 데이터 없거나 force_update 켜져있으면 가져와서 업데이트 자동으로 수행
 
-    def get_all_markets(self, save=True):
-        pass
+        # map -> 해당 데이터를 리스트로 반환
+        markets = list(map(lambda x: x.decode(), self.r.lrange(ALL_MARKETS, 0, -1)))
+        
+        if len(markets) is 0 or self.force_update:
+            markets = super().get_all_markets()
+            self.r.lpush(ALL_MARKETS, *markets)
+            return markets
+
+        # 데이터가 있고 force_update 상태가 아니면 바로 리턴시키면 된다.
+        return markets
 
 
 

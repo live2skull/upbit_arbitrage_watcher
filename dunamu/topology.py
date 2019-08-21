@@ -12,18 +12,20 @@ TERMS = {
 upbitLocalClient = UpbitLocalClient()
 
 
+
+
 #TODO: applying coroutine / lambda fast filtering
 def get_buyable_list(base_coin):
-    markets = _get_markets()
-    results = []
+    markets = upbitLocalClient.all_markets
 
+    results = list(filter(lambda x: x.split(',')[0] == base_coin, markets))
     return results
 
 
 def get_sellable_list(target_coin):
-    markets = _get_markets()
-    results = []
+    markets = upbitLocalClient.all_markets
 
+    results = list(filter(lambda x: x.split(',')[0] == target_coin, markets))
     return results
 
 

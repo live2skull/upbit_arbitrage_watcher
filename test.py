@@ -8,7 +8,6 @@ from dunamu import apis, misc, calculator, orderbook
 from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
     BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
-
 # https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
 
 def calc():
@@ -55,8 +54,8 @@ def pika_send():
     connection.close()
 
 
-def pika_recv():
-    pass
+def test():
+    print (apis.UpbitLocalClient().all_markets)
 
 
 def main():
@@ -64,8 +63,8 @@ def main():
 
     if func == 'verify_orderbook':
         verify_orderbook()
-    elif func == 'pika_recv':
-        pika_recv()
+    elif func == 'test':
+        test()
     elif func == 'pika_send':
         pika_send()
     elif func == 'calc':
