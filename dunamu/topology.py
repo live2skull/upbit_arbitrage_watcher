@@ -1,4 +1,4 @@
-from .transaction import Transaction
+from .transaction import Transaction, TRX_BUY, TRX_SELL
 from .misc import create_logger, create_redis_pool, keys2floats
 
 from .apis import UpbitLocalClient
@@ -7,6 +7,7 @@ from .apis import UpbitLocalClient
 TERMS = {
     1 : 3, 2 : 4
 }
+SPECIAL_BASES = ['BTC', 'ETH']
 
 _upbitLocalClient = UpbitLocalClient()
 
@@ -23,6 +24,10 @@ def get_sellable_list(target_coin):
 
     results = list(filter(lambda x: x.split(',')[0] == target_coin, markets))
     return results
+
+def create_transactions(lists: list, transaction_type):
+    for l in lists:
+        yield Transaction.try_create(market=l, transaction_type=transaction_type)
 
 
 class Counter:
@@ -79,11 +84,53 @@ class Topology:
             term += 1
 
             if term == max_term:
-                pass
-                # Transaction.try_create
-                # ...
+                ## TODO: 만약 기저통화가 KRW가 아닌 BTC, ETH인 경우
+                ## XRP => BTC 형태로의 판매도 가능하다.
+                ## 구매인 경우: BTC -> ETH (기저통화가 ETH)
+
+                if base_coin in SPECIAL_BASES and tr.coin_current in SPECIAL_BASES:
+                    _tr = Transaction.try_create(
+                        market="%s-%s" % (tr.coin_current, base_coin),
+                        transaction_type=TRX_BUY, front=tr
+                    )
+
+                else:
+                    _tr = Transaction.try_create(
+                        market="%s-%s" % (base_coin, tr.coin_current),
+                        transaction_type=TRX_SELL, front=tr
+                    )
+
+                if _tr is None:
+                    return False
+
+                tr.attach(_tr)
+                return True
+
             else:
-                # non - default process
+                # 자기 자신이 기저 화폐인 경우 2가지 경우가 가능!
+                if tr.coin_is_base:
+                    for l in get_buyable_list(tr.coin_current):
+                        _tr = Transaction.try_create(
+                            market="%s-%s" % (tr.coin_base, l),
+                            transaction_type=TRX_BUY
+                        )
+                        if _tr is None: continue
+                        result = build(_tr, term) # 해당 object에 대해 recursive하게 노드 작성
+                        
+
+
+                    # ex) KRW-BTC 같은 형태
+                    for _tr in create_transactions(
+                            get_sellable_list(tr.coin_current), TRX_SELL):
+                        if _tr is None: continue
+
+
+                # 그렇지 않은 경우 한개의 경우만 가능.
+                else:
+                    # get_sellable_list => CNAME 이므로
+                    #
+
+                    pass
 
 
         for __tr in new_topology.transaction_entries:

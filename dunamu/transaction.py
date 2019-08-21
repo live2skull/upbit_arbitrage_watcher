@@ -94,7 +94,7 @@ class Transaction:
     def coin_is_base(self):
         return self.coin_current in _coin_bases
 
-    def __int__(self, market, transaction_type, front=None):
+    def __init__(self, market, transaction_type, front=None):
         self.market = market
         self.coin_base, self.coin_target = market.split('-')
 
@@ -110,6 +110,26 @@ class Transaction:
 
         self.logger = create_logger('transaction_%s' % market)
 
+    # front 객체까지 반복하여 올라갑니다.
+    def __str__(self):
+        tree = []
+
+        def recursive(current: Transaction):
+            tree.append('%s(%s / %4s)' % (
+                current.coin_current, current.market,
+                'BUY' if current.transaction_type is TRX_BUY else 'SELL'
+            ))
+            return recursive(current.front) if current.front else None
+
+        recursive(self)
+        return " -> ".join(tree)
+
+
+    @classmethod
+    def try_create(cls, market, transaction_type):
+        # TODO : fix?
+        if market not in _orderbooks.keys(): return None
+        return cls(market, transaction_type)
 
     def calculate(self):
         # 유닛 데이터 불러오기
@@ -142,6 +162,10 @@ class Transaction:
                 balance, amount
             ))
 
+    def attach(self, tr):
+        ## TODO: detect duplicated mounting!
+        assert isinstance(tr, Transaction)
+        self.nexts.append(tr)
 
     def update(self):
         # update() -> 위 오브젝트부터 순서대로 진행하게 된다.
