@@ -1,5 +1,5 @@
 from .transaction import Transaction
-from .misc import create_logger, create_redis_pool
+from .misc import create_logger, create_redis_pool, keys2floats
 
 from .apis import UpbitLocalClient
 
@@ -8,22 +8,18 @@ TERMS = {
     1 : 3, 2 : 4
 }
 
-
-upbitLocalClient = UpbitLocalClient()
-
+_upbitLocalClient = UpbitLocalClient()
 
 
-
-#TODO: applying coroutine / lambda fast filtering
 def get_buyable_list(base_coin):
-    markets = upbitLocalClient.all_markets
+    markets = _upbitLocalClient.all_markets
 
     results = list(filter(lambda x: x.split(',')[0] == base_coin, markets))
     return results
 
 
 def get_sellable_list(target_coin):
-    markets = upbitLocalClient.all_markets
+    markets = _upbitLocalClient.all_markets
 
     results = list(filter(lambda x: x.split(',')[0] == target_coin, markets))
     return results
@@ -36,15 +32,36 @@ class Counter:
 
 
 
+ENDPOINT_BASE = 0
+ENDPOINT_TARGET = 1
+
+
 class Topology:
 
     transaction_entries = None # type: list
     source_coin = None # type: str
 
+    endpoint_type = None
+
     def __init__(self, source_coin):
         self.source_coin = source_coin
 
+    def explore_transactions_bfs_gen(self):
+        pass
+
+    # 업데이트가 필요한 트랜젝션만 찾아서 재계산(update) 수행 후 검증하면 됩니다.
+    def update_and_verify(self, market):
+        pass
+
+    # 전체 트랜젝션을 순서대로 재계산 후 검증하면 됩니다.
+    def refresh_and_verify(self):
+        pass
+
+    # save / load - 실행하면 자기 자신에서 그리게 됩니다.
     def save(self):
+        pass
+
+    def load(self):
         pass
 
     @classmethod
@@ -52,6 +69,7 @@ class Topology:
         if cycle not in TERMS.keys(): raise ValueError("Invalid cycle!")
 
         new_topology = cls(base_coin)
+        new_topology.endpoint_type = ENDPOINT_BASE
         new_topology.transaction_entries = get_buyable_list(new_topology.source_coin)
 
         max_term = TERMS[cycle]
@@ -65,7 +83,7 @@ class Topology:
                 # Transaction.try_create
                 # ...
             else:
-                pass
+                # non - default process
 
 
         for __tr in new_topology.transaction_entries:
@@ -73,6 +91,11 @@ class Topology:
             build(__tr, term)
 
 
+
     @classmethod
     def create_via_target(cls, target_coin, cycle=1, cached=True, save=False):
-        pass
+        if cycle not in TERMS.keys(): raise ValueError("Invalid cycle!")
+
+        new_topology = cls(target_coin)
+        new_topology.endpoint_type = ENDPOINT_TARGET
+        new_topology.transaction_entries = get_buyable_list(new_topology.source_coin)

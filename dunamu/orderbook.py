@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from .apis import UpbitAPIClient
 from .misc import create_logger, create_redis_pool\
-    , create_pika_connection,  get_timestamp
+    , create_pika_connection,  get_timestamp, strs2float
 from .config import TIMEOUT_REDIS_LOCK
 
 
@@ -36,9 +36,7 @@ LAST_UPDATE_TIME = 'last_update_time'
 LAST_REQUEST_TIME = 'last_request_time'
 
 
-def strs2floats(val: list, target: list):
-    target.clear()
-    for v in val: target.append(float(v))
+
 
 
 

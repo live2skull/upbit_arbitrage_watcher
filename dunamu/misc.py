@@ -19,6 +19,16 @@ def get_timestamp():
     return int(time.time() * 1000)
 
 
+def strs2floats(val: list, target: list):
+    target.clear()
+    for v in val: target.append(float(v))
+
+
+def keys2floats(val: dict, target: dict):
+    target.clear()
+    for k, v in val: target.setdefault(k, float(v))
+
+
 def create_logger(name: str, level:int = None, format:str = None,
                   propagate=False):
 

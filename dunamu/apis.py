@@ -9,7 +9,8 @@ from time import sleep
 import parse
 import redis
 
-from .misc import get_timestamp, create_logger, create_redis_pool, create_pika_connection
+from .misc import get_timestamp, create_logger,\
+    create_redis_pool, create_pika_connection, keys2floats
 from .config import THROTTLE_API_DEFAULT_TIME, \
     THROTTLE_REMAIN_MIN_TIME ,THROTTLE_REMAIN_SEC_TIME
 
@@ -121,7 +122,9 @@ class UpbitAPIClient(Session):
 
 ## TODO: 각 object에 대해 독립적으로 업데이트 등을 작성하여야 함.
 
-ALL_MARKETS = 'markets'
+MARKETS_ALL = 'markets'
+MARKETS_BASE = 'markets_base'
+FEE = 'fee'
 
 class UpbitLocalClient(UpbitAPIClient):
     r = None # type: Redis
@@ -133,22 +136,40 @@ class UpbitLocalClient(UpbitAPIClient):
         self.r = redis.StrictRedis(connection_pool=pool)
         self.update = False
 
-    @staticmethod
     @property
     def all_markets(self):
         # 먼저 redis에서 데이터 가져오기
         # 데이터 없거나 force_update 켜져있으면 가져와서 업데이트 자동으로 수행
 
         # map -> 해당 데이터를 리스트로 반환
-        markets = list(map(lambda x: x.decode(), self.r.lrange(ALL_MARKETS, 0, -1)))
+        markets = list(map(lambda x: x.decode(), self.r.lrange(MARKETS_ALL, 0, -1)))
         
         if len(markets) is 0 or self.force_update:
             markets = super().get_all_markets()
-            self.r.lpush(ALL_MARKETS, *markets)
+            self.r.lpush(MARKETS_ALL, *markets)
             return markets
 
         # 데이터가 있고 force_update 상태가 아니면 바로 리턴시키면 된다.
         return markets
+
+
+    @property
+    def base_markets(self):
+        markets = list(map(lambda x: x.decode(), self.r.lrange(MARKETS_BASE, 0, -1)))
+        return markets
+
+    @property
+    def fee(self):
+        fees = self.r.hgetall(FEE); ret = {}
+        if len(fees) is None:
+            pass # TODO: warning - handling exception support
+        keys2floats(fees, ret)
+        return ret
+
+
+
+
+
 
 
 
