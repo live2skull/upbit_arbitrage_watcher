@@ -3,19 +3,33 @@
 -> 프로젝트 1차 작성 / 추후 업그레이드 시 활용할것.
 '''
 
+import os
+import jwt
+import uuid
+import hashlib
 import logging
 from requests import Session, get, post
 from time import sleep
 import parse
 import redis
+from urllib.parse import urlencode
 
 from .misc import get_timestamp, create_logger,\
     create_redis_pool, create_pika_connection, keys2floats
 from .config import THROTTLE_API_DEFAULT_TIME, \
     THROTTLE_REMAIN_MIN_TIME ,THROTTLE_REMAIN_SEC_TIME
 
+
+
+# TODO: check api key is invalid
+access_key = os.environ['UPBIT_OPEN_API_ACCESS_KEY']
+secret_key = os.environ['UPBIT_OPEN_API_SECRET_KEY']
+
+
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
+URL_MARKET_CHANCE = 'https://api.upbit.com/v1/orders/chance'
+
 
 
 class UpbitAPIClient(Session):
@@ -27,14 +41,43 @@ class UpbitAPIClient(Session):
         Session.__init__(self)
         self.logger = create_logger('UpbitAPIClient')
 
-    def get(self, group, url, params=None, **kwargs):
+    def build_auth_header(self, query, uuid4):
+        query_string = urlencode(query).encode()
+        m = hashlib.sha512()
+        m.update(query_string)
+        query_hash = m.hexdigest()
+
+        payload = {
+            'access_key': access_key,
+            'nonce': str(uuid4),
+            'query_hash': query_hash,
+            'query_hash_alg': 'SHA512',
+        }
+        jwt_token = jwt.encode(payload, secret_key).decode('utf-8')
+        authorize_token = 'Bearer {}'.format(jwt_token)
+        headers = {"Authorization": authorize_token}
+
+        return headers
+
+
+    def get(self, group, url, params={}, auth=False, **kwargs):
         self.check_and_wait(group)
-        resp = Session.get(self, url=url, params=params, **kwargs)
+        if auth:
+            _uuid = uuid.uuid4()
+            headers = self.build_auth_header(params, _uuid)
+            resp = Session.get(self, url=url, params=params, headers=headers, **kwargs)
+        else:
+            resp = Session.get(self, url=url, params=params, **kwargs)
         return self.finalize(resp)
 
-    def post(self, group, url, params=None, data=None, **kwargs):
+    def post(self, group, url, params={}, data=None, auth=False, **kwargs):
         self.check_and_wait(group)
-        resp = Session.post(self, url=url, params=params, data=data, **kwargs)
+        if auth:
+            _uuid = uuid.uuid4()
+            headers = self.build_auth_header(params, _uuid)
+            resp = Session.post(self, url=url, params=params, data=data, headers=headers, **kwargs)
+        else:
+            resp = Session.post(self, url=url, params=params, data=data, **kwargs)
         return self.finalize(resp)
 
     def set_initial_remain(self, group):
@@ -114,11 +157,18 @@ class UpbitAPIClient(Session):
             markets = ",".join(markets)
         return self.get(group='orderbook', url=URL_ORDERBOOK, params={'markets': markets})
 
+    def get_market_status(self, market):
+        return self.get(group='orders', url=URL_MARKET_CHANCE, params={'market': market}, auth=True)
+
     # https://wikidocs.net/64
     def get_all_markets(self):
         return list(map(
             lambda x: x['market'],
             self.get(group="market", url=URL_ALL_MARKET)))
+
+
+
+
 
 ## TODO: 각 object에 대해 독립적으로 업데이트 등을 작성하여야 함.
 

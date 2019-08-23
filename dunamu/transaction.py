@@ -142,39 +142,51 @@ class Transaction:
     def try_create(cls, market, transaction_type):
         # TODO : fix?
         if market not in _orderbooks.keys(): return None
+        _orderbook = _orderbooks[market] # type: Orderbook
+        if not _orderbook.is_units_available: return None
         return cls(market, transaction_type)
 
     def calculate(self):
         # 유닛 데이터 불러오기
         # Orderbook에서 캐싱 최적화를 작성해 놓았으니 걱정 ㄴㄴ
+        # TODO: 최대 호가로 거래 종결 불가능한 경우 -> 추가 flag 설정 (update_gen 시 오브젝트 반환안함)
+        # TODO: market status 같이 반영 - api에 추가합니다.
+
+
         units = self.orderbook.units
 
+        try:
+            # TODO: -0.00000000 -> ??
+            if self.transaction_type == TRX_BUY:
+                balance, amount = vt_buy_all(
+                    balance=self.wallet.get(self.coin_base),
+                    fee=self.fee,
+                    ask_prices=units[ASK_PRICES],
+                    ask_amounts=units[ASK_AMOUNTS]
+                )
+                self.wallet.set(self.coin_base, balance)
+                self.wallet.set(self.coin_target, amount)
+                self.logger.debug("calculated TRX_BUY balance=%.8f amount=%.8f" % (
+                    balance, amount
+                ))
 
-        if self.transaction_type == TRX_BUY:
-            balance, amount = vt_buy_all(
-                balance=self.wallet.get(self.coin_base),
-                fee=0,
-                ask_prices=units[ASK_PRICES],
-                ask_amounts=units[ASK_AMOUNTS]
-            )
-            self.wallet.set(self.coin_base, balance)
-            self.wallet.set(self.coin_target, amount)
-            self.logger.debug("calculated TRX_BUY balance=%.8f amount=%.8f" % (
-                balance, amount
-            ))
+            if self.transaction_type == TRX_SELL:
+                balance, amount = vt_sell_all(
+                    amount=self.wallet.get(self.coin_target),
+                    fee=self.fee,
+                    bid_prices=units[BID_PRICES],
+                    bid_amounts=units[BID_AMOUNTS]
+                )
+                self.wallet.set(self.coin_base, balance)
+                self.wallet.set(self.coin_target, amount)
+                self.logger.debug("calculated TRX_SELL balance=%.8f amount=%.8f" % (
+                    balance, amount
+                ))
 
-        if self.transaction_type == TRX_SELL:
-            balance, amount = vt_sell_all(
-                amount=self.wallet.get(self.coin_target),
-                fee=0,
-                bid_prices=units[BID_PRICES],
-                bid_amounts=units[BID_AMOUNTS]
-            )
-            self.wallet.set(self.coin_base, balance)
-            self.wallet.set(self.coin_target, amount)
-            self.logger.debug("calculated TRX_SELL balance=%.8f amount=%.8f" % (
-                balance, amount
-            ))
+            return True
+        except ValueError as e:
+            self.logger.critical("계산 중 오류 발생. %s" % e)
+            return False
 
 
     def attach(self, tr):
@@ -198,7 +210,7 @@ class Transaction:
 
             for n in tr.nexts:
                 n.wallet.update(tr.wallet)
-                n.calculate()
+                if not n.calculate(): continue # 최대 호가 초과 시 해당 트랜젝션은 사용하지 않습니다.
                 if n.is_terminal:
                     yield n
                 else:

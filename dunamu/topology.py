@@ -23,13 +23,14 @@ def get_buyable_transactions(base_coin):
     results = []
     for market in _markets:
         base, target = market.split('-')
+
         if base == base_coin:
-            results.append(
-                    Transaction(
-                    market=market,
-                    transaction_type=TRX_BUY
-                )
+            tr = Transaction.try_create(
+                market=market,
+                transaction_type=TRX_BUY
             )
+            if tr is not None: results.append(tr)
+
     return results
 
 
@@ -37,13 +38,13 @@ def get_sellable_transaction(target_coin):
     results = []
     for market in _markets:
         base, target = market.split('-')
+
         if target == target_coin:
-            results.append(
-                    Transaction(
-                    market=market,
-                    transaction_type=TRX_SELL
-                )
+            tr = Transaction.try_create(
+                market=market,
+                transaction_type=TRX_SELL
             )
+            if tr is not None: results.append(tr)
     return results
 
 
@@ -150,6 +151,19 @@ class Topology:
 
     def load(self):
         pass
+
+    # used for evaluate testing
+    @classmethod
+    def create_via_base_str(cls, base_str: str, tree_str: str, wallet:Wallet):
+        transactions = tree_str.split(' -> ')
+
+        term = 1
+        max_term = len(transactions) - 1
+
+        def build(term: int, tr: Transaction):
+            pass
+
+        build(term, transactions[0])
 
     @classmethod
     def create_via_base(cls, base_coin: str, wallet:Wallet, cycle=1, cached=True, save=False):

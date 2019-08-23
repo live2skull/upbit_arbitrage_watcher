@@ -75,7 +75,7 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
     # TODO: empty orderbook checker
     if len(ask_prices) is 0:
         logger.critical("vt_buy_all: 호가 정보가 존재하지 않음.")
-        return dec2float(0), dec2float(0)
+        raise ValueError("호가 정보가 없음")
 
     for i in range(0, len(ask_prices)):
         _ask_price = Decimal(ask_prices[i])
@@ -87,7 +87,7 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
 
     if not bool(is_finished):
         logger.critical("vt_buy_all: 최대 호가로 거래를 종결할 수 없음.")
-        return dec2float(0), dec2float(0)
+        raise ValueError("최대 호가로 거래를 종결할 수 없음")
 
     if isKRW: sess.balance = truncate(sess.balance)
     return dec2float(sess.balance), dec2float(sess.amount)
@@ -119,7 +119,7 @@ def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
 
     if len(bid_prices) is 0:
         logger.critical("vt_sell_all: 호가 정보가 존재하지 않음.")
-        return dec2float(0), dec2float(0)
+        raise ValueError("호가 정보가 존재하지 않음.")
 
     for i in range(0, len(bid_prices)):
         _bid_price = Decimal(bid_prices[i])
@@ -131,9 +131,9 @@ def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
 
     if not bool(is_finished):
         logger.critical("vt_sell_all: 최대 호가로 거래를 종결할 수 없음.")
-        return dec2float(0), dec2float(0)
+        raise ValueError("최대 호가로 거래를 종결할 수 없음")
 
-    balance = math.trunc(sess.balance) if isKRW else sess.balance
+    if isKRW: sess.balance = truncate(sess.balance)
     return dec2float(sess.balance), dec2float(sess.amount)
 
 

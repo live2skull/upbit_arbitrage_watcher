@@ -65,6 +65,15 @@ class Orderbook:
 
 
     @property
+    def is_units_available(self):
+        units = self.units
+
+        for k, v in units.items():
+            if len(v) is 0:
+                return False
+        return True
+
+    @property
     def units(self):
         # 데이터 입력시에는 str (byte) 형태로 저장되므로 반환시에는 float으로 변환 후 처리.
 
@@ -140,6 +149,8 @@ class Orderbook:
             ## TODO: add initialized flag
             if self.last_update_time is 0:
                 # 초기화 동작은 업데이트로 전파하지 않음.
+                # -> 업데이트로 전파하지 않았을 뿐
+                # 호가 데이터 정보는 조회할 수 있다.
                 self.last_update_time = timestamp
                 return False
             else:

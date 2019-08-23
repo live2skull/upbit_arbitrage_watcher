@@ -9,9 +9,14 @@ from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
     BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
 from dunamu.topology import Topology
-from dunamu.transaction import Wallet
+from dunamu.transaction import Wallet, Transaction, TRX_SELL, TRX_BUY
+
 
 # https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
+
+def api():
+    API = apis.UpbitAPIClient()
+    print(API.get_market_status('ETH-GNT')['market']['state'])
 
 def calc():
     order = orderbook.Orderbook('KRW-BTC')
@@ -46,12 +51,18 @@ def verify_orderbook():
 
 def generate_topology():
     wallet = Wallet()
-    wallet.set('KRW', 250000)
+    wallet.set('KRW', 100000)
     top = Topology.create_via_base('KRW', wallet=wallet, cycle=1)
     # print(top.print)
     # print(len(top))
 
     top.update_and_verify()
+
+def wallet():
+    t = Transaction(market='KRW-ATOM', transaction_type=TRX_SELL)
+    t.wallet.set('ATOM', 30.76923076)
+    t.calculate()
+    print(t.wallet.account)
 
 
 def pika_send():
@@ -83,6 +94,10 @@ def main():
         calc()
     elif func == 'topology':
         generate_topology()
+    elif func == 'api':
+        api()
+    elif func == 'wallet':
+        wallet()
 
 if __name__ == '__main__':
     main()
