@@ -8,10 +8,11 @@ from dunamu import apis, misc, calculator, orderbook
 from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
     BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
+from dunamu.topology import Topology
+
 # https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
 
 def calc():
-
     order = orderbook.Orderbook('KRW-BTC')
     units = order.units
 
@@ -40,6 +41,10 @@ def verify_orderbook():
             err.append(k)
 
     print(" ".join(err))
+
+
+def generate_topology():
+    pass
 
 
 def pika_send():

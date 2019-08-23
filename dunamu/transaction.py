@@ -168,6 +168,7 @@ class Transaction:
         self.nexts.append(tr)
 
     def update(self):
+        ## TODO: update last nodes -> yielding?
         # update() -> 위 오브젝트부터 순서대로 진행하게 된다.
         if not self.is_start:
             self.wallet.update(self.front.wallet)
