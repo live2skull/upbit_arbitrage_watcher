@@ -91,13 +91,13 @@ class Topology:
                 if base_coin in SPECIAL_BASES and tr.coin_current in SPECIAL_BASES:
                     _tr = Transaction.try_create(
                         market="%s-%s" % (tr.coin_current, base_coin),
-                        transaction_type=TRX_BUY, front=tr
+                        transaction_type=TRX_BUY
                     )
 
                 else:
                     _tr = Transaction.try_create(
                         market="%s-%s" % (base_coin, tr.coin_current),
-                        transaction_type=TRX_SELL, front=tr
+                        transaction_type=TRX_SELL
                     )
 
                 if _tr is None:
@@ -116,8 +116,13 @@ class Topology:
                         )
                         if _tr is None: continue
                         result = build(_tr, term) # 해당 object에 대해 recursive하게 노드 작성
-                        
-
+                        if result:
+                            tr.attach(_tr) # 해당 노드에 대한 작업 완료
+                        else: # -> false!
+                            # 삭제하고, 자기 자신까지만 삭제하면 된다. (at cycle=1)
+                            # TODO: 또는 현재까지 depth를 확인해서 삭제할 것 정하기
+                            # 이게 제일 중요할듯
+                            pass
 
                     # ex) KRW-BTC 같은 형태
                     for _tr in create_transactions(

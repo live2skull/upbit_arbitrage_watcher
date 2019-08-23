@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from .apis import UpbitAPIClient
 from .misc import create_logger, create_redis_pool\
-    , create_pika_connection,  get_timestamp, strs2float
+    , create_pika_connection,  get_timestamp, strs2floats
 from .config import TIMEOUT_REDIS_LOCK
 
 
