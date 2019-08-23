@@ -60,6 +60,13 @@ TRX_SELL = 1
 
 # TODO: logger service Object inheritance support?
 # virtual transaction implementation!
+
+
+'''
+현재 정보: 거래 이후의 상태 반환.
+
+'''
+
 class Transaction:
 
     # cached!
@@ -88,7 +95,10 @@ class Transaction:
 
     @property
     def coin_current(self):
-        return self.coin_base if self.transaction_type is TRX_BUY else self.coin_target
+        # 정확한 기준이...? ex) KRW-BTC -> 거래 이후의 상태를 반환합니다.
+        # self.transaction_type == TRX_BUY : self.coin_current
+        # self.transaction_type == TRX_SELL: self.coin_target
+        return self.coin_base if self.transaction_type is TRX_SELL else self.coin_target
 
     @property
     def coin_is_base(self):
@@ -101,6 +111,7 @@ class Transaction:
         self.orderbook = _get_orderbook(market)
         self.wallet = Wallet()
         self.transaction_type = transaction_type
+        # dictionary (hashset) 이용시 키 이름까지 byte() 배열이 되버린다.
         self.fee = _fee[self.coin_base]
 
         self.nexts = []
@@ -122,6 +133,7 @@ class Transaction:
             return recursive(current.front) if current.front else None
 
         recursive(self)
+        tree.reverse()
         return " -> ".join(tree)
 
 
@@ -165,6 +177,7 @@ class Transaction:
     def attach(self, tr):
         ## TODO: detect duplicated mounting!
         assert isinstance(tr, Transaction)
+        tr.front = self
         self.nexts.append(tr)
 
     def update(self):

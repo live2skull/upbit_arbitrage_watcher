@@ -26,7 +26,7 @@ def strs2floats(val: list, target: list):
 
 def keys2floats(val: dict, target: dict):
     target.clear()
-    for k, v in val: target.setdefault(k, float(v))
+    for k, v in val.items(): target.setdefault(k.decode(), float(v))
 
 
 def create_logger(name: str, level:int = None, format:str = None,

@@ -1,9 +1,12 @@
 import sys, os
+import redis
 
-
-from dunamu import apis
+from dunamu import apis, misc
 
 def get_market_list(market_base: str):
+
+    pool = misc.create_redis_pool()
+    r = redis.StrictRedis(connection_pool=pool)
 
     res = []
     markets = apis.get_all_market()
@@ -12,6 +15,7 @@ def get_market_list(market_base: str):
         if m.split('-')[0] == market_base:
             res.append(m)
 
+    r.lpush(apis.MARKETS_ALL, *res)
     print(','.join(res))
 
 

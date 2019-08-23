@@ -44,7 +44,8 @@ def verify_orderbook():
 
 
 def generate_topology():
-    pass
+    top = Topology.create_via_base('USDT')
+    print(top)
 
 
 def pika_send():
@@ -74,6 +75,8 @@ def main():
         pika_send()
     elif func == 'calc':
         calc()
+    elif func == 'topology':
+        generate_topology()
 
 if __name__ == '__main__':
     main()

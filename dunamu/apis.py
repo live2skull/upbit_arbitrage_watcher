@@ -155,7 +155,12 @@ class UpbitLocalClient(UpbitAPIClient):
 
     @property
     def base_markets(self):
+        # redis.exceptions.ResponseError: WRONGTYPE Operation against a key holding the wrong kind of value
+        # 키가 없는 경우에 위 에러가 발생할 수 있음
         markets = list(map(lambda x: x.decode(), self.r.lrange(MARKETS_BASE, 0, -1)))
+
+
+
         return markets
 
     @property
@@ -165,10 +170,6 @@ class UpbitLocalClient(UpbitAPIClient):
             pass # TODO: warning - handling exception support
         keys2floats(fees, ret)
         return ret
-
-
-
-
 
 
 
