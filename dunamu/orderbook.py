@@ -127,7 +127,7 @@ class Orderbook:
 
         if timestamp <= self.last_update_time:
             # last_request_time 은 별도로 접근할때 충돌 위험이 크지 않으므로 별도로 lock하지 않습니다.
-            self.r.set(self.r_name + LAST_REQUEST_TIME, self.last_request_time)
+            self.r.set("%s_%s" % (self.r_name, LAST_REQUEST_TIME), self.last_request_time)
             # with self.r.lock(self.r_lock, blocking_timeout=TIMEOUT_REDIS_LOCK) as lock:
             #     self._update_timestamp()
             return False

@@ -48,8 +48,8 @@ def generate_topology():
     wallet = Wallet()
     wallet.set('KRW', 250000)
     top = Topology.create_via_base('KRW', wallet=wallet, cycle=1)
-    print(top.print)
-    print(len(top))
+    # print(top.print)
+    # print(len(top))
 
     top.update_and_verify()
 

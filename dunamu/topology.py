@@ -16,6 +16,8 @@ _markets = _upbitLocalClient.all_markets
 
 ## get_..._transactions
 ## -> 토폴로지로 사용될 데이터들이므로 트랜젝션을 만들어서 내보냅니다.
+## ** 여기서 마켓 orderbook 정보가 가능한지 한번 더 판단함
+## ** 마켓이 사용 가능한지도 반단.
 
 def get_buyable_transactions(base_coin):
     results = []
@@ -98,7 +100,10 @@ class Topology:
 
 
     def check_profit(self, transaction: Transaction):
-        pass
+        start_balance = self.wallet.get(self.source_coin)
+        end_balance = transaction.wallet.get(self.source_coin)
+
+        return end_balance > start_balance, end_balance - start_balance
 
 
     def explore_transactions_bfs_gen(self, market: str):
@@ -134,9 +139,10 @@ class Topology:
             else self.transaction_entries
 
         for tr in _engine: # type: Transaction
-            for _tr in tr.update(): # type: Transaction
-                # orderbook 변경으로 인해 향을
-                print(_tr)
+            for _tr in tr.update_gen(): # type: Transaction
+                avail, profit = self.check_profit(_tr)
+                if avail:
+                    print("%s = %s" % (_tr, profit))
 
     # save / load - 실행하면 자기 자신에서 그리게 됩니다.
     def save(self):

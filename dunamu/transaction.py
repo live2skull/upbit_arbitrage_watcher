@@ -1,5 +1,6 @@
 
 from copy import copy
+import queue
 
 from .apis import UpbitLocalClient
 from .calculator import vt_buy_all, vt_sell_all
@@ -148,6 +149,7 @@ class Transaction:
         # Orderbook에서 캐싱 최적화를 작성해 놓았으니 걱정 ㄴㄴ
         units = self.orderbook.units
 
+
         if self.transaction_type == TRX_BUY:
             balance, amount = vt_buy_all(
                 balance=self.wallet.get(self.coin_base),
@@ -183,15 +185,24 @@ class Transaction:
 
     # 업데이트하고, 호가 반영이 된 트랜젝션들을 반환합니다.
     def update_gen(self):
+
+        q = queue.Queue()
+        q.put(self)
+
         if not self.is_start:
             self.wallet.update(self.front.wallet)
-
         self.calculate()
-        if self.is_terminal: yield self
-        else:
-            for n in self.nexts:  # type: Transaction
-                n.update()
 
+        while not q.empty():
+            tr = q.get()
+
+            for n in tr.nexts:
+                n.wallet.update(tr.wallet)
+                n.calculate()
+                if n.is_terminal:
+                    yield n
+                else:
+                    q.put(n)
 
     def update(self):
         ## TODO: update last nodes -> yielding?
