@@ -37,7 +37,7 @@ class Wallet:
 
     def update(self, wallet):
         self.account.clear()
-        for k,v in wallet.account:
+        for k,v in wallet.account.items():
             self.account.setdefault(k, v)
 
     def set(self, coin, amount):
@@ -174,11 +174,24 @@ class Transaction:
                 balance, amount
             ))
 
+
     def attach(self, tr):
         ## TODO: detect duplicated mounting!
         assert isinstance(tr, Transaction)
         tr.front = self
         self.nexts.append(tr)
+
+    # 업데이트하고, 호가 반영이 된 트랜젝션들을 반환합니다.
+    def update_gen(self):
+        if not self.is_start:
+            self.wallet.update(self.front.wallet)
+
+        self.calculate()
+        if self.is_terminal: yield self
+        else:
+            for n in self.nexts:  # type: Transaction
+                n.update()
+
 
     def update(self):
         ## TODO: update last nodes -> yielding?
@@ -188,5 +201,5 @@ class Transaction:
 
         self.calculate()
         if self.is_terminal: return
-        for next in self.nexts: # type: Transaction
-            next.update()
+        for n in self.nexts: # type: Transaction
+            n.update()

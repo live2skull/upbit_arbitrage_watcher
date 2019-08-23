@@ -1,6 +1,6 @@
 import queue
 
-from .transaction import Transaction, TRX_BUY, TRX_SELL
+from .transaction import Transaction, Wallet, TRX_BUY, TRX_SELL
 from .misc import create_logger, create_redis_pool, keys2floats
 
 from .apis import UpbitLocalClient
@@ -65,13 +65,33 @@ ENDPOINT_TARGET = 1
 class Topology:
 
     transaction_entries = None # type: list
-    source_coin = None # type: str
 
+    source_coin = None # type: str
     endpoint_type = None
+
+    wallet = None # type: Wallet
+
 
     def __init__(self, source_coin):
         self.source_coin = source_coin
         self.transaction_entries = []
+        self.wallet = Wallet()
+
+    def __len__(self):
+        i = 0
+        for obj in self.endpoint_transactions_bfs_gen():
+            i += 1
+        return i
+
+
+    @property
+    def print(self):
+        # __str__ 로 구현하지 않은 이유는 디버깅시 evaluation이 일어나므로 매우 느려질 수 있음!
+        out = []
+        for tr in self.endpoint_transactions_bfs_gen():
+            out.append(str(tr))
+        return "\n".join(out)
+
 
     def attach(self, transaction: Transaction):
         self.transaction_entries.append(transaction)
@@ -92,16 +112,31 @@ class Topology:
             else:
                 for _tr in tr.nexts: q.put(_tr)
 
+
+    def endpoint_transactions_bfs_gen(self):
+        q = queue.Queue()
+        for tr in self.transaction_entries: q.put(tr)
+
+        while not q.empty():
+            tr = q.get() # type: Transaction
+            if tr.is_terminal:
+                yield tr
+            else:
+                for _tr in tr.nexts: q.put(_tr)
+
     # 트랜젝션 재계산 요청
     # TODO: set initial wallet statement
     def update_and_verify(self, market=None):
-        _engine = self.explore_transactions_bfs_gen(market) if market\
-            else self.transaction_entries
-        
         # market=None -> 전체 업데이트 요청이므로 바로 상위 트랜젝션에서 업데이트
         # market="" -> 매칭되는 오브젝트만 찾아서 해당 하위 오브젝트까지 업데이트 진행
+
+        _engine = self.explore_transactions_bfs_gen(market) if market\
+            else self.transaction_entries
+
         for tr in _engine: # type: Transaction
-            tr.update()
+            for _tr in tr.update(): # type: Transaction
+                # orderbook 변경으로 인해 향을
+                print(_tr)
 
     # save / load - 실행하면 자기 자신에서 그리게 됩니다.
     def save(self):
@@ -111,10 +146,12 @@ class Topology:
         pass
 
     @classmethod
-    def create_via_base(cls, base_coin: str, cycle=1, cached=True, save=False):
+    def create_via_base(cls, base_coin: str, wallet:Wallet, cycle=1, cached=True, save=False):
         if cycle not in TERMS.keys(): raise ValueError("Invalid cycle!")
+        if wallet is None: raise ValueError("Invalid wallet!")
 
         new_topology = cls(base_coin)
+        new_topology.wallet = wallet
         new_topology.endpoint_type = ENDPOINT_BASE
 
         max_term = TERMS[cycle]
@@ -171,6 +208,7 @@ class Topology:
         for __tr in get_buyable_transactions(base_coin):
             # 여기서 빌드가 실패하는 경우...? 가 발생한다면 attach 하지 않으면 됩니다.
             if build(__tr, term):
+                __tr.wallet.update(new_topology.wallet) # 해당 값을 업로드합니다.
                 new_topology.attach(__tr)
 
         return new_topology
@@ -180,6 +218,8 @@ class Topology:
     def create_via_target(cls, target_coin, cycle=1, cached=True, save=False):
         if cycle not in TERMS.keys(): raise ValueError("Invalid cycle!")
 
-        new_topology = cls(target_coin)
-        new_topology.endpoint_type = ENDPOINT_TARGET
-        new_topology.transaction_entries = get_buyable_list(new_topology.source_coin)
+        raise NotImplementedError("아직 구현되지 않았습니다.")
+
+        # new_topology = cls(target_coin)
+        # new_topology.endpoint_type = ENDPOINT_TARGET
+        # new_topology.transaction_entries = get_buyable_list(new_topology.source_coin)

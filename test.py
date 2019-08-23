@@ -9,6 +9,7 @@ from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
     BID_AMOUNTS, BID_PRICES, LAST_REQUEST_TIME, LAST_UPDATE_TIME
 
 from dunamu.topology import Topology
+from dunamu.transaction import Wallet
 
 # https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
 
@@ -44,8 +45,13 @@ def verify_orderbook():
 
 
 def generate_topology():
-    top = Topology.create_via_base('USDT')
-    print(top)
+    wallet = Wallet()
+    wallet.set('KRW', 250000)
+    top = Topology.create_via_base('KRW', wallet=wallet, cycle=1)
+    print(top.print)
+    print(len(top))
+
+    top.update_and_verify()
 
 
 def pika_send():
