@@ -1,9 +1,10 @@
 import time
 import logging
 import os, sys
+import redis
 
 import pika
-import redis
+
 from requests import Session
 
 
