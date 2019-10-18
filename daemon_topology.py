@@ -50,7 +50,7 @@ def main():
 
     market = top_bucket.data['topology_top']
 
-    for _top in list_comprehension(top_bucket.data, topology_per_cpu):
+    for _top in list_comprehension(top_bucket.data['objects'], topology_per_cpu):
         daemon = TopologyPredictionDaemon(topology=Topology.deserialize({
             'topology_top' : market, 'objects' : _top
         }))
