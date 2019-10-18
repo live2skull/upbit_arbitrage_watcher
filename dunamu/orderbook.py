@@ -210,7 +210,6 @@ class OrderbookDaemon(Thread):
         self.redis_pool = create_redis_pool()
         self.pika_conn = create_pika_connection()
         self.pika_channel = self.pika_conn.channel()
-
         self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
 
         # initializing orderbook

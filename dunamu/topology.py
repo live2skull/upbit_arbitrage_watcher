@@ -1,3 +1,4 @@
+from multiprocessing import Process
 import queue
 
 from .transaction import Transaction, Wallet, TRX_BUY, TRX_SELL
@@ -5,11 +6,14 @@ from .misc import create_logger, create_redis_pool, keys2floats
 
 from .apis import UpbitLocalClient
 
+from .misc import create_logger, create_redis_pool\
+    , create_pika_connection, get_timestamp, strs2floats
 
 TERMS = {
     1 : 3, 2 : 4
 }
 SPECIAL_BASES = ['BTC', 'ETH']
+
 
 _upbitLocalClient = UpbitLocalClient()
 _markets = _upbitLocalClient.all_markets
@@ -18,6 +22,9 @@ _markets = _upbitLocalClient.all_markets
 ## -> 토폴로지로 사용될 데이터들이므로 트랜젝션을 만들어서 내보냅니다.
 ## ** 여기서 마켓 orderbook 정보가 가능한지 한번 더 판단함
 ## ** 마켓이 사용 가능한지도 반단.
+
+PIKA_EXCHANGE = 'orderbook'
+PIKA_EXCHANGE_TYPE = 'topic'
 
 
 class Bucket:
@@ -80,6 +87,7 @@ class Topology:
     endpoint_type = None
 
     wallet = None # type: Wallet
+    _markets = None
 
 
     def __init__(self, source_coin):
@@ -100,6 +108,13 @@ class Topology:
         for tr in self.endpoint_transactions_bfs_gen():
             out.append(str(tr))
         return "\n".join(out)
+
+    @property
+    def markets(self):
+        if self._markets is None:
+            self._markets = self.all_transactions_bfs()
+
+        return self._markets
 
 
     def serialize(self):
@@ -198,11 +213,30 @@ class Topology:
             else:
                 for _tr in tr.nexts: q.put(_tr)
 
+    def all_transactions_bfs(self):
+        markets = set()
+        q = queue.Queue()
+        for tr in self.transaction_entries:
+            q.put(tr)
+            markets.add(tr.market)
+
+        while not q.empty():
+            tr = q.get() # type: Transaction
+            if tr.is_terminal:
+                markets.add(tr.market)
+            else:
+                for _tr in tr.nexts:
+                    q.put(_tr)
+                    markets.add(_tr.market)
+        return list(markets)
+
     # 트랜젝션 재계산 요청
     # TODO: set initial wallet statement
     def update_and_verify(self, market=None):
         # market=None -> 전체 업데이트 요청이므로 바로 상위 트랜젝션에서 업데이트
         # market="" -> 매칭되는 오브젝트만 찾아서 해당 하위 오브젝트까지 업데이트 진행
+
+        results = []
 
         _engine = self.explore_transactions_bfs_gen(market) if market \
             else self.transaction_entries
@@ -211,7 +245,9 @@ class Topology:
             for _tr in tr.update_gen(): # type: Transaction
                 avail, profit = self.check_profit(_tr)
                 if avail:
-                    print("%s = %s" % (_tr, profit))
+                    # print("%s = %s" % (_tr, profit))
+                    results.append((_tr, profit))
+        return results
 
 
     # used for evaluate testing
@@ -305,3 +341,56 @@ class Topology:
         # new_topology = cls(target_coin)
         # new_topology.endpoint_type = ENDPOINT_TARGET
         # new_topology.transaction_entries = get_buyable_list(new_topology.source_coin)
+
+
+
+# https://stackoverflow.com/questions/8489684/python-subclassing-multiprocessing-process
+class TopologyPredictionDaemon(Process):
+
+    """
+    최신화된 호가 거래쌍을 받아서 토폴로지에 연산 처리후 사용 가능한 거래 명세를 반환합니다.
+    """
+
+    logger = None
+    is_running = None  # type: bool
+    topology = None # type: Topology
+
+    pika_conn = None
+    pika_channel = None
+
+    def __init__(self, topology: Topology):
+        Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
+
+        self.logger = create_logger("TopologyDaemon")
+
+    def __init_process(self):
+        self.pika_conn = create_pika_connection()
+        self.pika_channel = self.pika_conn.channel()
+        self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
+
+        result = self.pika_channel.queue_declare('', exclusive=True, auto_delete=True)
+        queue_name = result.method.queue  # create unique queue!
+
+        self.pika_channel.queue_bind(exchange=PIKA_EXCHANGE, queue=queue_name, routing_key="*")
+        self.pika_channel.basic_consume(
+            queue=queue_name, on_message_callback=self.pika_callback, auto_ack=True
+        )
+
+    def pika_callback(self, ch, method, properties, body):
+        market = method.routing_key
+        self.orderbook_updated(market)
+
+    def orderbook_updated(self, market: str):
+        if market not in self.topology.markets:
+            # 전체 마켓안에 없으니 추가 확인할 필요가 없다.
+            return
+
+        else:
+            avails = self.topology.update_and_verify(market)
+            for avail in avails: # Transaction, Profit
+                print("TRX %s = %s" % (avail[0], avail[1]))
+
+
+    def run(self):
+        self.__init_process()
+        self.logger.info("%s개 토폴로지에 대한 작동이 시작되었습니다." % len(self.topology))

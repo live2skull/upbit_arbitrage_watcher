@@ -5,6 +5,7 @@
 .env
 __pycache__
 
+topology.json
 *.sh
 
 # User-specific stuff
