@@ -14,6 +14,11 @@ parser.add_option("-c", "--cpu", dest="cpu",
                   help="cpu amount", metavar="CPU")
 parser.add_option("-f", "--file", dest="file",
                   help="topology file", metavar="FILE")
+parser.add_option('-b', '--base', dest="dest",
+                  help="base coin", metavar='DEST')
+parser.add_option('-l', '--balance', dest="balance",
+                  help="balance", metavar='balance')
+
 
 class Bucket:
     data = None
@@ -58,7 +63,7 @@ def main():
     for _top in _topologies:
         daemon = TopologyPredictionDaemon(topology=Topology.deserialize({
             'topology_top' : market, 'objects' : _top
-        }))
+        }), base=option.base, balance=float(option.balance))
         daemons.append(daemon)
 
     for daemon in daemons:

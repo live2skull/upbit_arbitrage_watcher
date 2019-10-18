@@ -360,11 +360,16 @@ class TopologyPredictionDaemon(Process):
     pika_conn = None
     pika_channel = None
 
+    base = None # type: None
+    balance = None # type: None
+
     exit = None # type: Event
 
-    def __init__(self, topology: Topology):
+    def __init__(self, topology: Topology, base, balance):
         Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
         self.exit = Event()
+        self.base = base
+        self.balance = balance
 
         self.topology = topology
 
@@ -393,6 +398,10 @@ class TopologyPredictionDaemon(Process):
 
         else:
             self.logger.info("received / refresh %s" % market)
+
+            wallet = Wallet()
+            wallet.set(self.base, self.balance)
+            self.topology.wallet = wallet
 
             # avails = self.topology.update_and_verify(market)
             avails = self.topology.update_and_verify()
