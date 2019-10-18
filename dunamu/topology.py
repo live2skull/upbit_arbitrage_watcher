@@ -361,6 +361,7 @@ class TopologyPredictionDaemon(Process):
     def __init__(self, topology: Topology):
         Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
 
+        self.topology = topology
         self.logger = create_logger("TopologyDaemon")
 
     def __init_process(self):
