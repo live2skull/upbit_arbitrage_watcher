@@ -1,4 +1,4 @@
-import signal, os
+import signal, os, sys
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -41,16 +41,18 @@ def main():
     top_bucket = Bucket()
 
     if option.file:
-        top_bucket.data = loads(open(file=option.file).read())
+        path = sys.path[0] + "\\" +  option.file if os.name == 'nt' else option.file
+        top_bucket.data = loads(open(file=path).read())
     else:
         raise ValueError()
 
-    topology_size = len(top_bucket.data)
+    topology_size = len(Topology.deserialize(top_bucket.data))
     topology_per_cpu = math.ceil(topology_size / int(option.cpu))
 
     market = top_bucket.data['topology_top']
+    _topologies = list_comprehension(top_bucket.data['objects'], topology_per_cpu)
 
-    for _top in list_comprehension(top_bucket.data['objects'], topology_per_cpu):
+    for _top in _topologies:
         daemon = TopologyPredictionDaemon(topology=Topology.deserialize({
             'topology_top' : market, 'objects' : _top
         }))

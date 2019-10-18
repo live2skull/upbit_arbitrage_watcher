@@ -1,4 +1,5 @@
 from multiprocessing import Process
+from time import sleep
 import queue
 
 from .transaction import Transaction, Wallet, TRX_BUY, TRX_SELL
@@ -392,6 +393,14 @@ class TopologyPredictionDaemon(Process):
                 print("TRX %s = %s" % (avail[0], avail[1]))
 
 
+    def join(self, timeout=None):
+        self.is_running = False
+        Process.join(self, timeout)
+
     def run(self):
+        self.is_running = True
         self.__init_process()
         self.logger.info("%s개 토폴로지에 대한 작동이 시작되었습니다." % len(self.topology))
+
+        while self.is_running:
+            sleep(0.001)
