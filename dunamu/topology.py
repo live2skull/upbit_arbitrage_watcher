@@ -404,5 +404,4 @@ class TopologyPredictionDaemon(Process):
         self.__init_process()
         self.logger.info("%s개 토폴로지 로드." % len(self.topology))
 
-        while self.is_running:
-            sleep(0.001)
+        self.pika_channel.start_consuming()
