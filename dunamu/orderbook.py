@@ -152,7 +152,7 @@ class Orderbook:
                 return False
             else:
                 self.last_update_time = timestamp
-                self.logger.info('orderbook updated.')
+                self.logger.info('updated.')
                 return True
 
     ## support *redis* memory sharing!
