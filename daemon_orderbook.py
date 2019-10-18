@@ -12,18 +12,17 @@ from dunamu import apis
 
 def main():
 
+    daemons = []
+
     # TODO: add option parser
-    market_base = argv[1].upper() # type: str
+    market_bases = argv[1].upper().split(',') # type: str
     _markets = apis.UpbitLocalClient().all_markets
 
-    # result = list(filter(lambda x: (x % 13 == 0), my_list))
-    # lambda + map 이용할 경우 None 값이 리스트에 포함되면 안된다.
-    # filter 이용하여 True 반환되는 값만 이용한다.
-    markets = list(filter(lambda x: x.split('-')[0] == market_base, _markets))
 
     def signal_handler(sig, frame):
         print("!!! ** warm shutdown. please wait... ")
-        daemon.join(timeout=5)
+        for _daemon in daemons: # type: orderbook.OrderbookDaemon
+            _daemon.join(timeout=5)
         print("!!! now exit.")
         exit(0)
 
@@ -34,10 +33,16 @@ def main():
     # signal.signal(signal.SIGKILL, signal_handler)  # support windows pycharm environment
 
 
-    daemon = orderbook.OrderbookDaemon(market_base, markets)
-    daemon.start()
+    for market_base in market_bases:
+        # result = list(filter(lambda x: (x % 13 == 0), my_list))
+        # lambda + map 이용할 경우 None 값이 리스트에 포함되면 안된다.
+        # filter 이용하여 True 반환되는 값만 이용한다.
+        markets = list(filter(lambda x: x.split('-')[0] == market_base, _markets))
+        daemon = orderbook.OrderbookDaemon(market_base, markets)
+        daemons.append(daemon)
 
-
+    for daemon in daemons:
+        daemon.start()
 
     while True:
         input()
