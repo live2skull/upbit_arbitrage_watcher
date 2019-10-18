@@ -46,7 +46,7 @@ def main():
         raise ValueError()
 
     topology_size = len(top_bucket.data)
-    topology_per_cpu = math.ceil(topology_size / option.cpu)
+    topology_per_cpu = math.ceil(topology_size / int(option.cpu))
 
     market = top_bucket.data['topology_top']
 
