@@ -2,20 +2,24 @@ from sys import argv
 import signal, os
 
 from dotenv import load_dotenv
+load_dotenv()
 from dunamu import orderbook
-
-
+from dunamu import apis
 
 # TODO: add signal detection -> stop daemon gracefully (lock 오류방지 및 데이터 flush)
 # TODO: orderbook daemon 로거 설정
 
 
 def main():
-    load_dotenv()
 
-    market_base = argv[1]
-    markets = argv[2] # TODO: replace markets arg -> markets file
-    # 옵션 파싱기를 사용하자.
+    # TODO: add option parser
+    market_base = argv[1].upper() # type: str
+    _markets = apis.UpbitLocalClient().all_markets
+
+    # result = list(filter(lambda x: (x % 13 == 0), my_list))
+    # lambda + map 이용할 경우 None 값이 리스트에 포함되면 안된다.
+    # filter 이용하여 True 반환되는 값만 이용한다.
+    markets = list(filter(lambda x: x.split('-')[0] == market_base, _markets))
 
     def signal_handler(sig, frame):
         print("!!! ** warm shutdown. please wait... ")

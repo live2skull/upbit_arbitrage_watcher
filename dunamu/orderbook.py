@@ -200,7 +200,7 @@ class OrderbookDaemon(Thread):
     markets = None # type: dict
     markets_str = None # type: str
 
-    def __init__(self, market_base:str, markets: str):
+    def __init__(self, market_base:str, markets: list):
         ## TODO: 데몬이 사전에 실행되고 있는가?
 
         Thread.__init__(self)
@@ -219,7 +219,7 @@ class OrderbookDaemon(Thread):
         # initializing orderbook
         # def __init__(self, market: str, pool):
         # 이렇게 하면 각각의 orderbook 객체별로 하나의 커넥션을 이용해 redis를 이용할 수 있습니다.
-        for market in markets.split(','):
+        for market in markets:
             self.markets.setdefault(market, Orderbook(market, self.redis_pool))
 
         # 로깅 옵션을 설정합니다.
