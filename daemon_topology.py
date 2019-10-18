@@ -29,7 +29,7 @@ def main():
     def signal_handler(sig, frame):
         print("!!! ** warm shutdown. please wait... ")
         for _daemon in daemons: # type: TopologyPredictionDaemon
-            _daemon.join(timeout=5)
+            _daemon.shutdown()
         print("!!! now exit.")
         exit(0)
 

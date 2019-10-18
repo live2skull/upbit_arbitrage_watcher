@@ -1,4 +1,4 @@
-from multiprocessing import Process
+from multiprocessing import Process, Event
 from time import sleep
 import os
 import queue
@@ -360,8 +360,11 @@ class TopologyPredictionDaemon(Process):
     pika_conn = None
     pika_channel = None
 
+    exit = None # type: Event
+
     def __init__(self, topology: Topology):
         Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
+        self.exit = Event()
 
         self.topology = topology
 
@@ -391,17 +394,16 @@ class TopologyPredictionDaemon(Process):
         else:
             self.logger.info("received / refresh %s" % market)
 
-            avails = self.topology.update_and_verify(market)
+            # avails = self.topology.update_and_verify(market)
+            avails = self.topology.update_and_verify()
             for avail in avails: # Transaction, Profit
                 self.logger.info("TRX %s = %s" % (avail[0], avail[1]))
 
 
-    def join(self, timeout=None):
-        self.is_running = False
-        Process.join(self, timeout)
+    def shutdown(self):
+        self.exit.set()
 
     def run(self):
-        self.is_running = True
         self.__init_process()
         self.logger.info("%s개 토폴로지 로드." % len(self.topology))
 
