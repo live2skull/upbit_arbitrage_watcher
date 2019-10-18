@@ -374,9 +374,7 @@ class TopologyPredictionDaemon(Process):
         self.balance = balance
 
         self.topology = topology
-        wallet = Wallet()
-        wallet.set(self.base, self.balance)
-        self.topology.wallet = wallet
+        self.topology.wallet.set(self.base, self.balance)
 
     def __init_process(self):
         self.logger = create_logger("TopologyDaemon_(%s)" % os.getpid())
@@ -416,5 +414,6 @@ class TopologyPredictionDaemon(Process):
     def run(self):
         self.__init_process()
         self.logger.info("%s개 토폴로지 로드." % len(self.topology))
+        self.logger.info("%s / %s" % (self.base, self.balance))
 
         self.pika_channel.start_consuming()
