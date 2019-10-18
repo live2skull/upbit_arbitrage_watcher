@@ -49,6 +49,9 @@ def main():
     topology_size = len(Topology.deserialize(top_bucket.data))
     topology_per_cpu = math.ceil(topology_size / int(option.cpu))
 
+    print("topology_size: %s" % topology_size)
+    print("topology_per_cpu: %s" % topology_per_cpu)
+
     market = top_bucket.data['topology_top']
     _topologies = list_comprehension(top_bucket.data['objects'], topology_per_cpu)
 

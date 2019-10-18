@@ -1,5 +1,6 @@
 from multiprocessing import Process
 from time import sleep
+import os
 import queue
 
 from .transaction import Transaction, Wallet, TRX_BUY, TRX_SELL
@@ -363,9 +364,9 @@ class TopologyPredictionDaemon(Process):
         Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
 
         self.topology = topology
-        self.logger = create_logger("TopologyDaemon")
 
     def __init_process(self):
+        self.logger = create_logger("TopologyDaemon_(%s)" % os.getpid())
         self.pika_conn = create_pika_connection()
         self.pika_channel = self.pika_conn.channel()
         self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
@@ -383,14 +384,15 @@ class TopologyPredictionDaemon(Process):
         self.orderbook_updated(market)
 
     def orderbook_updated(self, market: str):
+        self.logger.info(market)
+
         if market not in self.topology.markets:
-            # 전체 마켓안에 없으니 추가 확인할 필요가 없다.
             return
 
         else:
             avails = self.topology.update_and_verify(market)
             for avail in avails: # Transaction, Profit
-                print("TRX %s = %s" % (avail[0], avail[1]))
+                self.logger.info("TRX %s = %s" % (avail[0], avail[1]))
 
 
     def join(self, timeout=None):
@@ -400,7 +402,7 @@ class TopologyPredictionDaemon(Process):
     def run(self):
         self.is_running = True
         self.__init_process()
-        self.logger.info("%s개 토폴로지에 대한 작동이 시작되었습니다." % len(self.topology))
+        self.logger.info("%s개 토폴로지 로드." % len(self.topology))
 
         while self.is_running:
             sleep(0.001)
