@@ -244,6 +244,7 @@ class Topology:
             else self.transaction_entries
 
         for tr in _engine: # type: Transaction
+            tr.wallet = self.wallet
             for _tr in tr.update_gen(): # type: Transaction
                 avail, profit = self.check_profit(_tr)
                 if avail:
@@ -372,6 +373,9 @@ class TopologyPredictionDaemon(Process):
         self.balance = balance
 
         self.topology = topology
+        wallet = Wallet()
+        wallet.set(self.base, self.balance)
+        self.topology.wallet = wallet
 
     def __init_process(self):
         self.logger = create_logger("TopologyDaemon_(%s)" % os.getpid())
@@ -397,11 +401,7 @@ class TopologyPredictionDaemon(Process):
             return
 
         else:
-            self.logger.info("received / refresh %s" % market)
-
-            wallet = Wallet()
-            wallet.set(self.base, self.balance)
-            self.topology.wallet = wallet
+            self.logger.debug("received / refresh %s" % market)
 
             # avails = self.topology.update_and_verify(market)
             avails = self.topology.update_and_verify()
