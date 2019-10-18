@@ -2,6 +2,7 @@ from sys import argv
 import signal, os, sys
 
 from dotenv import load_dotenv
+load_dotenv()
 from dunamu import orderbook, misc
 
 from threading import Thread, RLock
