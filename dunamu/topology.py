@@ -384,12 +384,13 @@ class TopologyPredictionDaemon(Process):
         self.orderbook_updated(market)
 
     def orderbook_updated(self, market: str):
-        self.logger.info(market)
 
         if market not in self.topology.markets:
             return
 
         else:
+            self.logger.info("received / refresh %s" % market)
+
             avails = self.topology.update_and_verify(market)
             for avail in avails: # Transaction, Profit
                 self.logger.info("TRX %s = %s" % (avail[0], avail[1]))
