@@ -9,6 +9,7 @@ import uuid
 import hashlib
 import logging
 from requests import Session, get, post
+from requests_toolbelt.adapters import source
 from time import sleep
 import parse
 import redis
@@ -32,14 +33,23 @@ URL_MARKET_CHANCE = 'https://api.upbit.com/v1/orders/chance'
 
 
 
+
+# https://stackoverflow.com/questions/28773033/python-requests-how-to-bind-to-different-source-ip-for-each-request
+
 class UpbitAPIClient(Session):
 
     logger = None
     remainings = {}
 
-    def __init__(self):
+    def __init__(self, source_address: str=None):
         Session.__init__(self)
         self.logger = create_logger('UpbitAPIClient')
+
+        if source_address:
+            self.logger.info("mounted at source address: %s" % source_address)
+            new_source = source.SourceAddressAdapter(source_address)
+            self.mount('http://', new_source)
+            self.mount('https://', new_source)
 
     def build_auth_header(self, query, uuid4):
         query_string = urlencode(query).encode()
@@ -150,7 +160,7 @@ class UpbitAPIClient(Session):
             raise Exception(message)
         return resp_obj
 
-    #### --- api declaration
+    #### --- api declaration (provided default)
 
     def get_orderbook(self, markets):
         if type(markets) is list:
@@ -165,6 +175,20 @@ class UpbitAPIClient(Session):
         return list(map(
             lambda x: x['market'],
             self.get(group="market", url=URL_ALL_MARKET)))
+
+
+    ### api delcaration (mixed)
+    def get_available_markets(self):
+        markets = self.get_all_markets()
+        results = []
+
+        for market in markets:
+            ifo = self.get_market_status(market)
+            if ifo['market']['state'] == 'active':
+                results.append(market)
+
+        return results
+
 
 
 
@@ -193,7 +217,7 @@ class UpbitLocalClient(UpbitAPIClient):
 
         # map -> 해당 데이터를 리스트로 반환
         markets = list(map(lambda x: x.decode(), self.r.lrange(MARKETS_ALL, 0, -1)))
-        
+
         if len(markets) is 0 or self.force_update:
             markets = super().get_all_markets()
             self.r.lpush(MARKETS_ALL, *markets)
@@ -202,16 +226,21 @@ class UpbitLocalClient(UpbitAPIClient):
         # 데이터가 있고 force_update 상태가 아니면 바로 리턴시키면 된다.
         return markets
 
+    @all_markets.setter
+    def all_markets(self, value):
+        # 캐싱된 데이터를 삭제합니다.
+        self.r.delete(MARKETS_ALL)
+        self.r.lpush(MARKETS_ALL, *value)
+
 
     @property
     def base_markets(self):
         # redis.exceptions.ResponseError: WRONGTYPE Operation against a key holding the wrong kind of value
         # 키가 없는 경우에 위 에러가 발생할 수 있음
         markets = list(map(lambda x: x.decode(), self.r.lrange(MARKETS_BASE, 0, -1)))
-
-
-
         return markets
+
+
 
     @property
     def fee(self):

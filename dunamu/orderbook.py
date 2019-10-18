@@ -37,9 +37,6 @@ LAST_REQUEST_TIME = 'last_request_time'
 
 
 
-
-
-
 ## ex) KRW-BTC_orderbook_... 형태임
 ## 이를 orderbook_KRW-BTC_bid_prices 와 같은 형태로 작성.
 
@@ -200,7 +197,7 @@ class OrderbookDaemon(Thread):
     markets = None # type: dict
     markets_str = None # type: str
 
-    def __init__(self, market_base:str, markets: list):
+    def __init__(self, market_base:str, markets: list, source_address: str=None):
         ## TODO: 데몬이 사전에 실행되고 있는가?
 
         Thread.__init__(self)
@@ -209,7 +206,7 @@ class OrderbookDaemon(Thread):
         self.market_base = market_base
         self.markets = dict()
 
-        self.upbit_client = UpbitAPIClient()
+        self.upbit_client = UpbitAPIClient(source_address=source_address)
         self.redis_pool = create_redis_pool()
         self.pika_conn = create_pika_connection()
         self.pika_channel = self.pika_conn.channel()

@@ -38,7 +38,8 @@ def main():
         # lambda + map 이용할 경우 None 값이 리스트에 포함되면 안된다.
         # filter 이용하여 True 반환되는 값만 이용한다.
         markets = list(filter(lambda x: x.split('-')[0] == market_base, _markets))
-        daemon = orderbook.OrderbookDaemon(market_base, markets)
+        source_address = os.getenv("ORDERBOOK_DAEMON_SOURCE_%s" % market_base, None)
+        daemon = orderbook.OrderbookDaemon(market_base, markets, source_address=source_address)
         daemons.append(daemon)
 
     for daemon in daemons:
