@@ -19,6 +19,13 @@ _markets = _upbitLocalClient.all_markets
 ## ** 여기서 마켓 orderbook 정보가 가능한지 한번 더 판단함
 ## ** 마켓이 사용 가능한지도 반단.
 
+
+class Bucket:
+    data = None
+
+    def reset(self):
+        self.data = None
+
 def get_buyable_transactions(base_coin):
     results = []
     for market in _markets:
@@ -87,14 +94,75 @@ class Topology:
         return i
 
 
-    @property
-    def print(self):
+    def __str__(self):
         # __str__ 로 구현하지 않은 이유는 디버깅시 evaluation이 일어나므로 매우 느려질 수 있음!
         out = []
         for tr in self.endpoint_transactions_bfs_gen():
             out.append(str(tr))
         return "\n".join(out)
 
+
+    def serialize(self):
+        out = []
+        for tr in self.endpoint_transactions_bfs_gen():
+            out.append(tr.serialize())
+        return out
+
+
+    @classmethod
+    def deserialize(cls, obj):
+        # 중요! tree 형태로 객체를 다시 복원하여야 한다.
+
+        def search_at_entries(_tr: Transaction):
+            for __tr in new_topology.transaction_entries:
+                if __tr == _tr: return __tr
+            return None
+
+        new_topology = cls(obj['topology_top'])
+        new_topology.wallet = Wallet()
+        new_topology.endpoint_type = ENDPOINT_BASE
+
+        transactions = obj['objects']
+        # cycle = obj['cycle']
+        # max_step = 1 + (2 * cycle)
+
+        before = Bucket()
+
+        for transaction in transactions:
+            depth = 0
+            for tr in transaction: # !! tr -> not serialized!
+
+                tr = Transaction.deserialize(tr)
+
+                if depth is 0:
+
+                    before.data = search_at_entries(tr)
+
+                    if before.data is None:
+                        new_topology.attach(tr)
+                        before.data = tr
+                    # None: 해당 depth 에서 객체가 존재하지 않음.
+
+                else:
+                    # 잘못 생각했음. next를 다시 계산할 필요가 없는게, depth 순으로 접근하므로
+                    # 맨 마지막 노드만 이미 만들어져 있거나, 만들어야 하는게 된다.
+
+                    current = before.data # type: Transaction
+                    new = current.search_child(tr) # 해당 객체가 등록되어 있는지 검색한다.
+                    if new is None:
+                        current.attach(tr)
+                        before.data = tr # 다음 검색시 필요.
+
+                    # 이미 있는 경우 추가로 작성할 필요 없음.
+
+                depth += 1
+
+            before.reset()
+
+        return new_topology
+
+    def select(self):
+        pass
 
     def attach(self, transaction: Transaction):
         self.transaction_entries.append(transaction)
@@ -136,7 +204,7 @@ class Topology:
         # market=None -> 전체 업데이트 요청이므로 바로 상위 트랜젝션에서 업데이트
         # market="" -> 매칭되는 오브젝트만 찾아서 해당 하위 오브젝트까지 업데이트 진행
 
-        _engine = self.explore_transactions_bfs_gen(market) if market\
+        _engine = self.explore_transactions_bfs_gen(market) if market \
             else self.transaction_entries
 
         for tr in _engine: # type: Transaction
@@ -145,12 +213,6 @@ class Topology:
                 if avail:
                     print("%s = %s" % (_tr, profit))
 
-    # save / load - 실행하면 자기 자신에서 그리게 됩니다.
-    def save(self):
-        pass
-
-    def load(self):
-        pass
 
     # used for evaluate testing
     @classmethod
@@ -190,13 +252,13 @@ class Topology:
                 if base_coin in SPECIAL_BASES and tr.coin_current in SPECIAL_BASES:
                     _tr = Transaction.try_create(
                         market="%s-%s" % (tr.coin_current, base_coin),
-                        transaction_type=TRX_BUY
+                        transaction_type=TRX_BUY, front=tr
                     )
 
                 else:
                     _tr = Transaction.try_create(
                         market="%s-%s" % (base_coin, tr.coin_current),
-                        transaction_type=TRX_SELL
+                        transaction_type=TRX_SELL, front=tr
                     )
 
                 if _tr is None:
@@ -207,8 +269,8 @@ class Topology:
 
             else:
 
-            # This process is initialization process
-            ##########################
+                # This process is initialization process
+                ##########################
 
                 # 기저화폐인 경우 get_buyable_transaction도 다시 사용할 수 있다.
                 if tr.coin_is_base:

@@ -15,10 +15,11 @@ _redis_connection_pool = None
 
 # 본래 필요한 마켓들만 캐싱하면 되지만...
 # TODO: 시운전을 위해 이부분은 추후 별도로 최적화합니다.
+# TODO: get_all_market / get_available_markets 결가값이 같음. 추후 최적화. (2019. 10. 19)
 def _init_local_options():
     _redis_connection_pool = create_redis_pool()
 
-    for market in _upbitLocalClient.get_all_markets():
+    for market in _upbitLocalClient.all_markets:
         _orderbooks.setdefault(market, Orderbook(market, pool=_redis_connection_pool))
 
 
@@ -28,6 +29,7 @@ _coin_bases = _upbitLocalClient.base_markets
 
 def _get_orderbook(market):
     return _orderbooks[market]
+
 
 
 ## 전체 마켓 코인리스트를 가져와서 ["":""] 쌍으로 설정
@@ -138,13 +140,53 @@ class Transaction:
         return " -> ".join(tree)
 
 
+    def __eq__(self, other):
+        # single instance!
+        return self.market == other.market and self.transaction_type == other.transaction_type
+
+    def serialize(self):
+
+        # default : SOLVE(KRW-SOLVE /  BUY)
+
+        """
+        { "source" : &, "destination" : &, trx_type" : BUY | SELL
+        """
+
+        tree = []
+
+        def recursive(current: Transaction):
+            obj = copy(dict(market="", trx_type=""))
+
+            obj['market'] = current.market
+            obj['trx_type'] = 'BUY' if current.transaction_type is TRX_BUY else 'SELL'
+            tree.append(obj)
+
+            return recursive(current.front) if current.front else None
+
+        recursive(self)
+        tree.reverse()
+        return tree
+
+
     @classmethod
-    def try_create(cls, market, transaction_type):
+    def deserialize(cls, obj, front=None):
+        # front -> 호출자에서 넘겨줍니다.
+        new_transaction = cls(obj['market'], obj['trx_type'], front=front)
+
+        return new_transaction
+
+
+    def search_child(self, tr):
+        for current in self.nexts:
+            if current == tr: return current
+
+    @classmethod
+    def try_create(cls, market, transaction_type, front=None):
         # TODO : fix?
         if market not in _orderbooks.keys(): return None
         _orderbook = _orderbooks[market] # type: Orderbook
         if not _orderbook.is_units_available: return None
-        return cls(market, transaction_type)
+        return cls(market, transaction_type, front)
 
     def calculate(self):
         # 유닛 데이터 불러오기
