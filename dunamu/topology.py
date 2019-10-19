@@ -425,11 +425,11 @@ class TopologyPredictionDaemon(Process):
         self.logger.info("%s개 토폴로지 로드." % len(self.topology))
         self.logger.info("%s / %s" % (self.base, self.balance))
 
-        while True:
+        while self.is_running:
             try:
                 self.pika_channel.start_consuming()
-            except:
+            except Exception as e:
                 if not self.is_running: return
-                self.logger.warning("warn: pika_channel disconnected.")
+                self.logger.warning("exception raised! %s" & e)
                 self.__init_process()
             if not self.is_running: return

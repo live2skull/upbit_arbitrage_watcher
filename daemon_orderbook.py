@@ -37,7 +37,13 @@ def main():
         # result = list(filter(lambda x: (x % 13 == 0), my_list))
         # lambda + map 이용할 경우 None 값이 리스트에 포함되면 안된다.
         # filter 이용하여 True 반환되는 값만 이용한다.
+
         markets = list(filter(lambda x: x.split('-')[0] == market_base, _markets))
+
+        # ex) ETH + USDT 동시에 사용할 수  있도록 조치하였음.
+        # -> daemon에서 base_market을 기준으로 동작하도록 설정하였으므로,
+        # 별도의 추가 설정은 하지 않았음.
+
         source_address = os.getenv("ORDERBOOK_DAEMON_SOURCE_%s" % market_base, None)
         daemon = orderbook.OrderbookDaemon(market_base, markets, source_address=source_address)
         daemons.append(daemon)

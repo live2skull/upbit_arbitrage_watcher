@@ -207,10 +207,7 @@ class OrderbookDaemon(Thread):
         self.markets = dict()
 
         self.upbit_client = UpbitAPIClient(source_address=source_address)
-        self.redis_pool = create_redis_pool()
-        self.pika_conn = create_pika_connection()
-        self.pika_channel = self.pika_conn.channel()
-        self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
+        self.redis_pool = create_redis_pool() # TODO: 스레드 분리 필요 없는가?
 
         # initializing orderbook
         # def __init__(self, market: str, pool):
@@ -218,16 +215,23 @@ class OrderbookDaemon(Thread):
         for market in markets:
             self.markets.setdefault(market, Orderbook(market, self.redis_pool))
 
-        # 로깅 옵션을 설정합니다.
-        self.logger = create_logger("%s_orderbook_daemon" % self.market_base)
 
+    # pika client reset / etc...
+    def __init_process(self):
+        self.pika_conn = create_pika_connection()
+        self.pika_channel = self.pika_conn.channel()
+        self.pika_channel.exchange_declare(PIKA_EXCHANGE, exchange_type=PIKA_EXCHANGE_TYPE)
 
     # overwrite
     def run(self):
+        # 별도 스레드에서 만들지 않으면 로그가 겹쳐 보일수 있습니다.
+        self.logger = create_logger("%s_orderbook_daemon" % self.market_base)
+
         self.logger.info("%s 마켓 호가 데몬이 시작되었습니다. (총 %s개 로드)" % (
             self.market_base, len(self.markets)
         ))
 
+        self.__init_process()
         self.is_running = True
         self.loop()
 
@@ -237,21 +241,28 @@ class OrderbookDaemon(Thread):
         Thread.join(self, timeout)
 
     def loop(self):
+
         while self.is_running:
-            resp = self.upbit_client.get_orderbook(self.markets_str)
 
-            for ifo in resp:
-                market = ifo['market']
-                timestamp = ifo['timestamp']
-                units = ifo['orderbook_units']
+            try:
+                resp = self.upbit_client.get_orderbook(self.markets_str)
 
-                updated = self.markets[market].update(timestamp, units)
-                if updated:
-                    self.pika_channel.basic_publish(
-                        exchange=PIKA_EXCHANGE, routing_key=market,
-                        body=str(timestamp),
-                        properties=PIKA_BASIC_PROPERTY
-                    )
+                for ifo in resp:
+                    market = ifo['market']
+                    timestamp = ifo['timestamp']
+                    units = ifo['orderbook_units']
+
+                    updated = self.markets[market].update(timestamp, units)
+                    if updated:
+                        self.pika_channel.basic_publish(
+                            exchange=PIKA_EXCHANGE, routing_key=market,
+                            body=str(timestamp),
+                            properties=PIKA_BASIC_PROPERTY
+                        )
+            except Exception as e:
+                if self.is_running:
+                    self.logger.warning("exception raised! %s" % e)
+                    self.__init_process()
 
             # market 별로 데이터 추출해서 orderbook에 넣어줍니다.
 
