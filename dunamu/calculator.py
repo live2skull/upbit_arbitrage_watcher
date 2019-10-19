@@ -51,7 +51,7 @@ class CalcSession:
         self.fee = Decimal(fee * 0.01 + 1)
 
 
-def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
+def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=False):
     sess = CalcSession(balance, 0, fee)
     is_finished = 0
 
@@ -94,7 +94,7 @@ def vt_buy_all(balance, fee, ask_prices: list, ask_amounts: list, isKRW=True):
 
 
 
-def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=True):
+def vt_sell_all(amount, fee, bid_prices: list, bid_amounts: list, isKRW=False):
 
     sess = CalcSession(0, amount, fee)
     is_finished = 0

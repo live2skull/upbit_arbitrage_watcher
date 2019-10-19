@@ -233,6 +233,7 @@ class Topology:
         return list(markets)
 
     # 트랜젝션 재계산 요청
+    # 중복계산 될 수 있겠음. 그부분을 해결하자.
     # TODO: set initial wallet statement
     def update_and_verify(self, market=None):
         # market=None -> 전체 업데이트 요청이므로 바로 상위 트랜젝션에서 업데이트
@@ -243,8 +244,12 @@ class Topology:
         _engine = self.explore_transactions_bfs_gen(market) if market \
             else self.transaction_entries
 
+        for tr in _engine:
+            tr.reset_calculate_flag()
+
         for tr in _engine: # type: Transaction
-            tr.wallet = self.wallet
+            tr.wallet.update(self.wallet)
+
             for _tr in tr.update_gen(): # type: Transaction
                 avail, profit = self.check_profit(_tr)
                 print("%s = %s" % (_tr, profit))

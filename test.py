@@ -54,7 +54,7 @@ def verify_orderbook():
 
 def generate_topology():
     wallet = Wallet()
-    wallet.set('KRW', 100000)
+    wallet.set('KRW', 200000)
     top = Topology.create_via_base('KRW', wallet=wallet, cycle=1)
     # print(top.print)
     # print(len(top))
@@ -62,10 +62,36 @@ def generate_topology():
     top.update_and_verify()
 
 def wallet():
-    t = Transaction(market='KRW-ATOM', transaction_type=TRX_SELL)
-    t.wallet.set('ATOM', 30.76923076)
-    t.calculate()
-    print(t.wallet.account)
+    # {"market":"KRW-WAXP","trx_type":"BUY"},
+    # {"market":"ETH-WAXP","trx_type":"SELL"},
+    # {"market":"KRW-ETH","trx_type":"SELL"}
+    t = Transaction(market='KRW-WAXP', transaction_type=TRX_BUY)
+    t.wallet.set('KRW', 200000)
+
+    t.attach(
+        Transaction(market='ETH-WAXP', transaction_type=TRX_SELL)
+    )
+    t.nexts[0].attach(
+        Transaction(market='KRW-ETH', transaction_type=TRX_SELL)
+    )
+
+
+    target = t.nexts[0].nexts[0]
+
+    t.update()
+    print(target.wallet.account)
+
+
+def wallet2():
+
+    obj = loads('[[{"market":"KRW-WAXP","trx_type":"BUY"},{"market":"ETH-WAXP","trx_type":"SELL"},{"market":"KRW-ETH","trx_type":"SELL"}]]')
+
+
+    top = Topology.deserialize({
+        'topology_top': 'KRW', 'objects': obj
+    })
+    top.wallet.set('KRW', 200000)
+    top.update_and_verify()
 
 
 def pika_send():
@@ -108,6 +134,8 @@ def main():
         api()
     elif func == 'wallet':
         wallet()
+    elif func == 'wallet2':
+        wallet2()
     elif func == 'dtop':
         deserialize_topology()
 

@@ -88,6 +88,8 @@ class Transaction:
     front = None # type: Transaction
     nexts = None # type: list
 
+    is_calculated = None #type: float
+
     @property
     def is_start(self):
         return self.front is None
@@ -102,6 +104,10 @@ class Transaction:
         # self.transaction_type == TRX_BUY : self.coin_current
         # self.transaction_type == TRX_SELL: self.coin_target
         return self.coin_base if self.transaction_type is TRX_SELL else self.coin_target
+
+    @property
+    def is_krw(self):
+        return self.market.upper().find('KRW') is not -1
 
     @property
     def coin_is_base(self):
@@ -122,6 +128,7 @@ class Transaction:
             self.front = front # connect linked list
             self.wallet = copy(front.wallet)
 
+        self.is_calculated = False
         self.logger = create_logger('transaction_%s' % market)
 
     # front 객체까지 반복하여 올라갑니다.
@@ -171,7 +178,9 @@ class Transaction:
     @classmethod
     def deserialize(cls, obj, front=None):
         # front -> 호출자에서 넘겨줍니다.
-        new_transaction = cls(obj['market'], obj['trx_type'], front=front)
+        new_transaction = cls(obj['market'],
+                              TRX_BUY if obj['trx_type'] == 'BUY' else TRX_SELL,
+                              front=front)
 
         return new_transaction
 
@@ -188,23 +197,43 @@ class Transaction:
         if not _orderbook.is_units_available: return None
         return cls(market, transaction_type, front)
 
+    def reset_calculate_flag(self):
+        q = queue.Queue()
+        q.put(self)
+
+        self.is_calculated = False
+
+        while not q.empty():
+            tr = q.get()
+
+            for n in tr.nexts:
+                n.is_calculated = False
+                if not n.is_terminal:
+                    q.put(n)
+
+
     def calculate(self):
         # 유닛 데이터 불러오기
         # Orderbook에서 캐싱 최적화를 작성해 놓았으니 걱정 ㄴㄴ
         # TODO: 최대 호가로 거래 종결 불가능한 경우 -> 추가 flag 설정 (update_gen 시 오브젝트 반환안함)
         # TODO: market status 같이 반영 - api에 추가합니다.
 
-
+        if self.is_calculated:
+            print("already calculated - bypass!")
+            return
+        self.is_calculated = True
         units = self.orderbook.units
 
         try:
             # TODO: -0.00000000 -> ??
+            # isKRW parameter missed!
             if self.transaction_type == TRX_BUY:
                 balance, amount = vt_buy_all(
                     balance=self.wallet.get(self.coin_base),
                     fee=self.fee,
                     ask_prices=units[ASK_PRICES],
-                    ask_amounts=units[ASK_AMOUNTS]
+                    ask_amounts=units[ASK_AMOUNTS],
+                    isKRW=self.is_krw
                 )
                 self.wallet.set(self.coin_base, balance)
                 self.wallet.set(self.coin_target, amount)
@@ -217,7 +246,8 @@ class Transaction:
                     amount=self.wallet.get(self.coin_target),
                     fee=self.fee,
                     bid_prices=units[BID_PRICES],
-                    bid_amounts=units[BID_AMOUNTS]
+                    bid_amounts=units[BID_AMOUNTS],
+                    isKRW=self.is_krw
                 )
                 self.wallet.set(self.coin_base, balance)
                 self.wallet.set(self.coin_target, amount)
@@ -257,6 +287,7 @@ class Transaction:
                     yield n
                 else:
                     q.put(n)
+
 
     def update(self):
         ## TODO: update last nodes -> yielding?
