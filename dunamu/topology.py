@@ -377,6 +377,7 @@ class TopologyPredictionDaemon(Process):
         self.base = base
         self.balance = balance
 
+        self.is_running = True
         self.topology = topology
         self.topology.wallet.set(self.base, self.balance)
 
@@ -413,9 +414,11 @@ class TopologyPredictionDaemon(Process):
 
 
     def shutdown(self):
+        self.is_running = False
         self.exit.set()
 
     def run(self):
+        self.is_running = True
         self.__init_process()
         self.logger.info("%s개 토폴로지 로드." % len(self.topology))
         self.logger.info("%s / %s" % (self.base, self.balance))
@@ -424,4 +427,6 @@ class TopologyPredictionDaemon(Process):
             try:
                 self.pika_channel.start_consuming()
             except:
+                if not self.is_running: return
                 self.logger.warning("warn: pika_channel disconnected.")
+            if not self.is_running: return
