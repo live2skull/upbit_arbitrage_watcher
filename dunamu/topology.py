@@ -252,7 +252,6 @@ class Topology:
 
             for _tr in tr.update_gen(): # type: Transaction
                 avail, profit = self.check_profit(_tr)
-                print("%s = %s" % (_tr, profit))
                 if avail:
                     # print("%s = %s" % (_tr, profit))
                     results.append((_tr, profit))
@@ -410,7 +409,7 @@ class TopologyPredictionDaemon(Process):
             # avails = self.topology.update_and_verify(market)
             avails = self.topology.update_and_verify()
             for avail in avails: # Transaction, Profit
-                self.logger.info("TRX %s = %s" % (avail[0], avail[1]))
+                self.logger.info("AVAIL %s = %s" % (avail[0], avail[1]))
 
 
     def shutdown(self):
