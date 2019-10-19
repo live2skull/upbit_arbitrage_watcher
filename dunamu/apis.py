@@ -26,15 +26,56 @@ from .config import THROTTLE_API_DEFAULT_TIME, \
 access_key = os.environ['UPBIT_OPEN_API_ACCESS_KEY']
 secret_key = os.environ['UPBIT_OPEN_API_SECRET_KEY']
 
+CONTENT_TYPE = 'application/json'
+
+
+URL_TOPOLOGIES = '/upbit/topologies'
+
+## TODO: 서버 요청 중 profit 데이터는 서버 요청을 기다릴 필요가 없다.
+class UnsterblichAPIClient(Session):
+
+    host = None # type: str
+    logger = None
+
+    def __init__(self, host=None):
+        Session.__init__(self)
+        self.logger = create_logger("UnsterblichAPIClient")
+        if os.getenv('GATEWAY_HOST', None) is None and host is None:
+            raise ValueError("gateway_host is not defined!")
+
+        self.host = host if host else os.getenv('GATEWAY_HOST', None)
+
+
+    def _get_url(self, url):
+        return "http://%s%s" % (self.host, url)
+
+    def get(self, url, **kwargs):
+        return Session.get(
+            self, url=self._get_url(url), headers={'Content-Type' : URL_TOPOLOGIES}, **kwargs
+        ).json()
+
+    def post(self, url, data=None, json=None, **kwargs):
+        return Session.post(
+            self, url=self._get_url(url), headers={'Content-Type' : URL_TOPOLOGIES}, **kwargs
+        ).json()
+
+    def get_available_topology(self, base_coin: str, balance: float, cycle=1):
+        assert isinstance(base_coin, str)
+        assert (isinstance(balance, int) or isinstance(balance, float))
+
+        return self.get(
+            url=URL_TOPOLOGIES,
+            params={'base_coin' : base_coin, 'balance' : balance, 'cycle' : cycle}
+        )
+
+    def contract_chained_transactions(self, transactions: list, maximum_balance: int):
+        pass
+
+# https://stackoverflow.com/questions/28773033/python-requests-how-to-bind-to-different-source-ip-for-each-request
 
 URL_ORDERBOOK = 'https://api.upbit.com/v1/orderbook'
 URL_ALL_MARKET = 'https://api.upbit.com/v1/market/all'
 URL_MARKET_CHANCE = 'https://api.upbit.com/v1/orders/chance'
-
-
-
-
-# https://stackoverflow.com/questions/28773033/python-requests-how-to-bind-to-different-source-ip-for-each-request
 
 class UpbitAPIClient(Session):
 

@@ -65,6 +65,12 @@ def wallet():
     # {"market":"KRW-WAXP","trx_type":"BUY"},
     # {"market":"ETH-WAXP","trx_type":"SELL"},
     # {"market":"KRW-ETH","trx_type":"SELL"}
+    
+    client = apis.UnsterblichAPIClient()
+    print(client.get_available_topology(base_coin='KRW', balance=100000))
+
+
+    return
     t = Transaction(market='KRW-WAXP', transaction_type=TRX_BUY)
     t.wallet.set('KRW', 200000)
 

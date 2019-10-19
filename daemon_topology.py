@@ -8,6 +8,7 @@ from json import loads
 import math
 
 from dunamu.topology import Topology, TopologyPredictionDaemon
+from dunamu.apis import UnsterblichAPIClient
 
 parser = OptionParser()
 parser.add_option("-c", "--cpu", dest="cpu",
@@ -43,13 +44,22 @@ def main():
 
     (option, args) = parser.parse_args()
 
+    base_coin = option.basecoin
+    balance = option.balance
+
     top_bucket = Bucket()
 
     if option.file:
+        # read topology from file
         path = sys.path[0] + "\\" +  option.file if os.name == 'nt' else option.file
         top_bucket.data = loads(open(file=path).read())
     else:
-        raise ValueError()
+        # read topology from server
+        client = UnsterblichAPIClient()
+        top_bucket.data = client.get_available_topology(base_coin=base_coin, balance=balance)
+
+
+    top_bucket.data = loads(top_bucket.data)
 
     topology_size = len(Topology.deserialize(top_bucket.data))
     topology_per_cpu = math.ceil(topology_size / int(option.cpu))
