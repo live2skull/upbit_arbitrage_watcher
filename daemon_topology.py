@@ -23,11 +23,15 @@ parser.add_option('-l', '--balance', dest="balance",
                   help="balance", metavar='balance')
 
 
-MIN_ALLOW = getenv('TOPOLOGY_MAX_ALLOW', None)
-MAX_ALLOW = getenv('TOPOLOGY_MIN_ALLOW', None)
+## TODO: argument parser (optionparser를 통합으로 운용)
+## TODO: python-pip / python3-pip 혼용 금지 및 requirements 패키지 관리하기
+## TODO: venv 이용하기
 
-assert not MIN_ALLOW is None
-assert not MAX_ALLOW is None
+MIN_ALLOW = float(getenv('TOPOLOGY_MAX_ALLOW', None))
+MAX_ALLOW = float(getenv('TOPOLOGY_MIN_ALLOW', None))
+
+# assert not MIN_ALLOW is None
+# assert not MAX_ALLOW is None
 
 class Bucket:
     data = None
