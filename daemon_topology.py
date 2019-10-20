@@ -55,6 +55,7 @@ def main():
         top_bucket.data = loads(open(file=path).read())
     else:
         # read topology from server
+        print("[!] load topology from server. please wait...")
         client = UnsterblichAPIClient()
         top_bucket.data = client.get_available_topology(base_coin=base_coin, balance=balance)
 

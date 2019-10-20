@@ -430,6 +430,6 @@ class TopologyPredictionDaemon(Process):
                 self.pika_channel.start_consuming()
             except Exception as e:
                 if not self.is_running: return
-                self.logger.warning("exception raised! %s" & e)
+                self.logger.warning("exception raised! %s" % e)
                 self.__init_process()
             if not self.is_running: return
