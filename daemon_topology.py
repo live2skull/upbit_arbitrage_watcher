@@ -27,8 +27,8 @@ parser.add_option('-l', '--balance', dest="balance",
 ## TODO: python-pip / python3-pip 혼용 금지 및 requirements 패키지 관리하기
 ## TODO: venv 이용하기
 
-MIN_ALLOW = float(getenv('TOPOLOGY_MAX_ALLOW', None))
-MAX_ALLOW = float(getenv('TOPOLOGY_MIN_ALLOW', None))
+MIN_ALLOW = float(getenv('TOPOLOGY_MIN_ALLOW', None))
+MAX_ALLOW = float(getenv('TOPOLOGY_MAX_ALLOW', None))
 
 # assert not MIN_ALLOW is None
 # assert not MAX_ALLOW is None
