@@ -56,7 +56,7 @@ class UnsterblichContractClient:
         url = self._get_url(URL_CONTRACT)
         self.logger.info("send %s" % url)
         # transactions : already serialized
-        post(url=url, data={
+        post(url=url, json={
             'balance': maximum_balance, 'transactions': transactions
         })
 
