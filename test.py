@@ -13,7 +13,7 @@ from dunamu.orderbook import ASK_AMOUNTS, ASK_PRICES,\
 
 from dunamu.topology import Topology
 from dunamu.transaction import Wallet, Transaction, TRX_SELL, TRX_BUY
-
+from dunamu.apis import UnsterblichContractClient
 
 # https://datascienceschool.net/view-notebook/148fc57f684c4dc48eeb5048ab0d45f2/
 
@@ -65,7 +65,13 @@ def wallet():
     # {"market":"KRW-WAXP","trx_type":"BUY"},
     # {"market":"ETH-WAXP","trx_type":"SELL"},
     # {"market":"KRW-ETH","trx_type":"SELL"}
-    
+
+
+    client = apis.UnsterblichContractClient()
+    client.contract_chained_transactions([], 1000)
+
+    return
+
     client = apis.UnsterblichAPIClient()
     print(client.get_available_topology(base_coin='KRW', balance=100000))
 

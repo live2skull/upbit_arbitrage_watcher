@@ -420,14 +420,22 @@ class TopologyPredictionDaemon(Process):
             # avails = self.topology.update_and_verify(market)
             avails = self.topology.update_and_verify()
             for avail in avails: # Transaction, Profit
-                self.logger.info("AVAIL %s = %s" % (avail[0], avail[1]))
 
-                if (avail[1] >= self.min_allow) and (avail[1] <= self.max_allow):
+                transaction = avail[0]
+                profit = avail[1]
+
+                self.logger.info("AVAIL %s = %s" % (transaction, profit))
+                process_flag = (profit >= self.min_allow) and (profit <= self.max_allow)
+
+                self.logger.info("AVAIL Process F = %s" % process_flag)
+
+                if process_flag:
                     self.logger.info("Send AVAIL to service!")
                     self.api.contract_chained_transactions(
                         maximum_balance=self.balance,
-                        transactions=avail[0].serialize()
+                        transactions=transaction.serialize()
                     )
+
 
 
     def shutdown(self):
