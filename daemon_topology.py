@@ -58,9 +58,6 @@ def main():
         client = UnsterblichAPIClient()
         top_bucket.data = client.get_available_topology(base_coin=base_coin, balance=balance)
 
-
-    top_bucket.data = loads(top_bucket.data)
-
     topology_size = len(Topology.deserialize(top_bucket.data))
     topology_per_cpu = math.ceil(topology_size / int(option.cpu))
 
