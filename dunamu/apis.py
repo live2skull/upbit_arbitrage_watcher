@@ -52,16 +52,17 @@ class UnsterblichContractClient:
 
         self.host = host if host else os.getenv('GATEWAY_HOST', None)
 
-    def _send(self, transactions: list, maximum_balance: int):
+    def _send(self, transactions: list, maximum_balance: int, profit):
         url = self._get_url(URL_CONTRACT)
         self.logger.info("send %s" % url)
         # transactions : already serialized
         post(url=url, json={
-            'balance': maximum_balance, 'transactions': transactions
+            'balance': maximum_balance, 'transactions': transactions,
+            'profit' : profit
         })
 
-    def contract_chained_transactions(self, transactions, maximum_balance):
-        th = Thread(target=self._send, args=(transactions, maximum_balance))
+    def contract_chained_transactions(self, transactions, maximum_balance, profit):
+        th = Thread(target=self._send, args=(transactions, maximum_balance, profit))
         th.start()
 
 

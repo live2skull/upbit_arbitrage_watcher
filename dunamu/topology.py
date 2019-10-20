@@ -433,7 +433,8 @@ class TopologyPredictionDaemon(Process):
                     self.logger.info("Send AVAIL to service!")
                     self.api.contract_chained_transactions(
                         maximum_balance=self.balance,
-                        transactions=transaction.serialize()
+                        transactions=transaction.serialize(),
+                        profit=profit
                     )
 
 
