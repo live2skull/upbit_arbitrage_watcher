@@ -45,7 +45,7 @@ def main():
     (option, args) = parser.parse_args()
 
     base_coin = option.basecoin
-    balance = option.balance
+    balance = float(option.balance)
 
     top_bucket = Bucket()
 
