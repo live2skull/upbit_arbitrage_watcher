@@ -53,8 +53,10 @@ class UnsterblichContractClient:
         self.host = host if host else os.getenv('GATEWAY_HOST', None)
 
     def _send(self, transactions: list, maximum_balance: int):
+        url = self._get_url(URL_CONTRACT)
+        self.logger.info("send %s" % url)
         # transactions : already serialized
-        post(self._get_url(URL_CONTRACT), data={
+        post(url=url, data={
             'balance': maximum_balance, 'transactions': transactions
         })
 
