@@ -12,7 +12,7 @@ import hashlib
 import logging
 from requests import Session, get, post
 from requests_toolbelt.adapters import source
-from requests_futures.sessions import FuturesSession
+from threading import Thread
 from time import sleep
 import parse
 import redis
@@ -41,7 +41,6 @@ class UnsterblichContractClient:
 
     host = None  # type: str
     logger = None
-    session = None # type: FuturesSession
 
     def _get_url(self, url):
         return "http://%s%s" % (self.host, url)
@@ -52,13 +51,16 @@ class UnsterblichContractClient:
             raise ValueError("gateway_host is not defined!")
 
         self.host = host if host else os.getenv('GATEWAY_HOST', None)
-        self.session = FuturesSession()
 
-    def contract_chained_transactions(self, transactions: list, maximum_balance: int):
+    def _send(self, transactions: list, maximum_balance: int):
         # transactions : already serialized
-        self.session.post(self._get_url(URL_CONTRACT), data={
-            'balance' : maximum_balance, 'transactions' : transactions
+        post(self._get_url(URL_CONTRACT), data={
+            'balance': maximum_balance, 'transactions': transactions
         })
+
+    def contract_chained_transactions(self, transactions, maximum_balance):
+        th = Thread(target=self._send, args=(transactions, maximum_balance))
+        th.start()
 
 
 class UnsterblichAPIClient(Session):
