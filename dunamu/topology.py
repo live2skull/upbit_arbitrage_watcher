@@ -6,7 +6,7 @@ import queue
 from .transaction import Transaction, Wallet, TRX_BUY, TRX_SELL
 from .misc import create_logger, create_redis_pool, keys2floats
 
-from .apis import UpbitLocalClient
+from .apis import UpbitLocalClient, UnsterblichContractClient
 
 from .misc import create_logger, create_redis_pool\
     , create_pika_connection, get_timestamp, strs2floats
@@ -359,6 +359,8 @@ class TopologyPredictionDaemon(Process):
     최신화된 호가 거래쌍을 받아서 토폴로지에 연산 처리후 사용 가능한 거래 명세를 반환합니다.
     """
 
+    api = None # type: UnsterblichContractClient
+
     logger = None
     is_running = None  # type: bool
     topology = None # type: Topology
@@ -371,7 +373,10 @@ class TopologyPredictionDaemon(Process):
 
     exit = None # type: Event
 
-    def __init__(self, topology: Topology, base, balance):
+    min_allow = None
+    max_allow = None
+
+    def __init__(self, topology: Topology, base, balance, min_allow, max_allow):
         Process.__init__(self) # 실제 동시 스레드로 구성해야 함.
         self.exit = Event()
         self.base = base
@@ -380,6 +385,11 @@ class TopologyPredictionDaemon(Process):
         self.is_running = True
         self.topology = topology
         self.topology.wallet.set(self.base, self.balance)
+
+        self.min_allow = min_allow
+        self.max_allow = max_allow
+
+
 
     def __init_process(self):
 
@@ -412,6 +422,13 @@ class TopologyPredictionDaemon(Process):
             for avail in avails: # Transaction, Profit
                 self.logger.info("AVAIL %s = %s" % (avail[0], avail[1]))
 
+                if (avail[1] >= self.min_allow) and (avail[1] <= self.max_allow):
+                    self.logger.info("Send AVAIL to service!")
+                    self.api.contract_chained_transactions(
+                        maximum_balance=self.balance,
+                        transactions=avail[0].serialize()
+                    )
+
 
     def shutdown(self):
         self.is_running = False
@@ -419,6 +436,7 @@ class TopologyPredictionDaemon(Process):
 
     def run(self):
         self.is_running = True
+        self.api = UnsterblichContractClient()
         self.logger = create_logger("TopologyDaemon_(%s)" % os.getpid())
 
         self.__init_process()

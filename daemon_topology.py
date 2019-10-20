@@ -10,6 +10,8 @@ import math
 from dunamu.topology import Topology, TopologyPredictionDaemon
 from dunamu.apis import UnsterblichAPIClient
 
+from os import getenv
+
 parser = OptionParser()
 parser.add_option("-c", "--cpu", dest="cpu",
                   help="cpu amount", metavar="CPU")
@@ -20,6 +22,12 @@ parser.add_option('-b', '--basecoin', dest="basecoin",
 parser.add_option('-l', '--balance', dest="balance",
                   help="balance", metavar='balance')
 
+
+MIN_ALLOW = getenv('TOPOLOGY_MAX_ALLOW', None)
+MAX_ALLOW = getenv('TOPOLOGY_MIN_ALLOW', None)
+
+assert not MIN_ALLOW is None
+assert not MAX_ALLOW is None
 
 class Bucket:
     data = None
@@ -71,7 +79,9 @@ def main():
     for _top in _topologies:
         daemon = TopologyPredictionDaemon(topology=Topology.deserialize({
             'topology_top' : market, 'objects' : _top
-        }), base=option.basecoin, balance=float(option.balance))
+        }), base=option.basecoin, balance=float(option.balance),
+            max_allow=MAX_ALLOW, min_allow=MIN_ALLOW
+        )
         daemons.append(daemon)
 
     for daemon in daemons:

@@ -3,6 +3,8 @@
 -> 프로젝트 1차 작성 / 추후 업그레이드 시 활용할것.
 '''
 
+# https://github.com/pika/pika/blob/0.12.0/examples/basic_consumer_threaded.py
+
 import os
 import jwt
 import uuid
@@ -10,6 +12,7 @@ import hashlib
 import logging
 from requests import Session, get, post
 from requests_toolbelt.adapters import source
+from requests_futures.sessions import FuturesSession
 from time import sleep
 import parse
 import redis
@@ -30,8 +33,34 @@ CONTENT_TYPE = 'application/json'
 
 
 URL_TOPOLOGIES = '/upbit/topologies'
+URL_CONTRACT = '/upbit/contract_chained_transactions'
 
 ## TODO: 서버 요청 중 profit 데이터는 서버 요청을 기다릴 필요가 없다.
+
+class UnsterblichContractClient:
+
+    host = None  # type: str
+    logger = None
+    session = None # type: FuturesSession
+
+    def _get_url(self, url):
+        return "http://%s%s" % (self.host, url)
+
+    def __init__(self, host=None):
+        self.logger = create_logger("UnsterblichContractClient")
+        if os.getenv('GATEWAY_HOST', None) is None and host is None:
+            raise ValueError("gateway_host is not defined!")
+
+        self.host = host if host else os.getenv('GATEWAY_HOST', None)
+        self.session = FuturesSession()
+
+    def contract_chained_transactions(self, transactions: list, maximum_balance: int):
+        # transactions : already serialized
+        self.session.post(self._get_url(URL_CONTRACT), data={
+            'balance' : maximum_balance, 'transactions' : transactions
+        })
+
+
 class UnsterblichAPIClient(Session):
 
     host = None # type: str
@@ -68,8 +97,6 @@ class UnsterblichAPIClient(Session):
             params={'base_coin' : base_coin, 'balance' : balance, 'cycle' : cycle}
         )
 
-    def contract_chained_transactions(self, transactions: list, maximum_balance: int):
-        pass
 
 # https://stackoverflow.com/questions/28773033/python-requests-how-to-bind-to-different-source-ip-for-each-request
 
